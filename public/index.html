@@ -62,17 +62,32 @@
   .cfg-msg.err{color:var(--red);}
   .cfg-msg.ok{color:var(--green);}
 
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px;}
-  .kpi .val{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:600;line-height:1;}
-  .kpi .lbl{color:var(--muted);font-size:12.5px;margin-top:8px;}
-  .kpi.accent .val{color:var(--amber);}
-
   .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 20px 12px;}
   .panel h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 2px;}
   .panel .desc{color:var(--muted);font-size:12.5px;margin:0 0 14px;}
   .chart-box{position:relative;}
+
+  .hero-stats{display:flex;justify-content:space-between;margin-top:10px;padding-top:14px;border-top:1px solid var(--line);flex-wrap:wrap;gap:10px;}
+  .hero-stats div{text-align:center;flex:1;min-width:70px;}
+  .hero-stats .v{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;}
+  .hero-stats .v.accent{color:var(--amber);}
+  .hero-stats .l{color:var(--muted);font-size:10.5px;margin-top:3px;}
+
+  .cliente-list{max-height:246px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .cliente-chip{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font-size:12.5px;cursor:pointer;}
+  .cliente-chip:hover{border-color:var(--amber);}
+  .cliente-chip.active{border-color:var(--amber);background:var(--amber-dim);color:var(--amber);}
+  .cliente-chip .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cliente-chip .cnt{color:var(--muted);font-size:11px;flex-shrink:0;}
+  .cliente-chip.active .cnt{color:var(--amber);}
+
+  .etapa-donut-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+  .etapa-card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 12px;text-align:center;}
+  .etapa-card h4{margin:0 0 8px;font-size:12.5px;font-weight:600;letter-spacing:.01em;}
+  .etapa-card .mini-chart{position:relative;height:110px;}
+  .etapa-card .mini-legend{margin-top:10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px;text-align:left;}
+  .etapa-card .mini-legend .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
 
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;color:var(--muted);font-weight:500;font-size:11.5px;text-transform:none;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);}
@@ -115,9 +130,10 @@
     <h3>Conectar à base de dados (Supabase)</h3>
     <p>
       Ninguém precisa fazer login para ver este painel — os dados chegam de uma cópia mantida atualizada
-      automaticamente a partir do SharePoint (veja o robô de sincronização no GitHub Actions do projeto).
-      Normalmente estes dois campos já vêm preenchidos no arquivo <code>public/index.html</code> antes do deploy;
-      use este painel só para testar rapidamente com outro projeto Supabase.
+      automaticamente a partir do Google Sheets (veja o robô de sincronização em Extensões > Apps Script
+      na planilha do projeto). Normalmente estes dois campos já vêm preenchidos no arquivo
+      <code>public/index.html</code> antes do deploy; use este painel só para testar rapidamente com
+      outro projeto Supabase.
     </p>
     <div class="cfg-grid" style="grid-template-columns:2fr 2fr 1fr;">
       <div>
@@ -144,25 +160,30 @@
     <div class="cfg-msg" id="cfgMsg"></div>
   </div>
 
-  <div class="kpis">
-    <div class="kpi accent"><div class="val" id="kpiConclusao">–</div><div class="lbl">% conclusão geral (peças)</div></div>
-    <div class="kpi"><div class="val" id="kpiTotalPecas">–</div><div class="lbl">peças planejadas</div></div>
-    <div class="kpi"><div class="val" id="kpiItens">–</div><div class="lbl">itens únicos em produção</div></div>
-    <div class="kpi"><div class="val" id="kpiCompletos">–</div><div class="lbl">itens 100% finalizados</div></div>
-    <div class="kpi"><div class="val" id="kpiNaoIniciados">–</div><div class="lbl">itens sem nenhuma etapa iniciada</div></div>
-  </div>
-
   <div class="grid2">
     <div class="panel">
-      <h2>Andamento por etapa</h2>
-      <p class="desc">Quantidade de peças por status em cada etapa do fluxo produtivo — mostra onde o volume está parado.</p>
-      <div class="chart-box" style="height:300px;"><canvas id="chartEtapas"></canvas></div>
+      <h2>Produção total</h2>
+      <p class="desc">Distribuição de todas as etapas registradas (todas as linhas de produção).</p>
+      <div class="chart-box" style="height:220px;"><canvas id="chartTotal"></canvas></div>
+      <div class="hero-stats">
+        <div><div class="v accent" id="kpiConclusao">–</div><div class="l">% concl. (peças)</div></div>
+        <div><div class="v" id="kpiTotalPecas">–</div><div class="l">peças planejadas</div></div>
+        <div><div class="v" id="kpiItens">–</div><div class="l">itens únicos</div></div>
+        <div><div class="v" id="kpiCompletos">–</div><div class="l">100% finalizados</div></div>
+        <div><div class="v" id="kpiNaoIniciados">–</div><div class="l">não iniciados</div></div>
+      </div>
     </div>
     <div class="panel">
-      <h2>Status geral</h2>
-      <p class="desc">Distribuição de todas as etapas registradas na planilha.</p>
-      <div class="chart-box" style="height:300px;"><canvas id="chartDonut"></canvas></div>
+      <h2>Cliente</h2>
+      <p class="desc">Clique para filtrar o painel inteiro por cliente/pacote.</p>
+      <div class="cliente-list" id="clienteList"></div>
     </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Progresso por etapa</h2>
+    <p class="desc">Andamento / Finalizado / Pendente em cada etapa do fluxo produtivo.</p>
+    <div class="etapa-donut-grid" id="etapaDonuts"></div>
   </div>
 
   <div class="panel" style="margin-bottom:16px;">
@@ -192,7 +213,7 @@
     </div>
   </div>
 
-  <footer>Painel gerado a partir de CONTROLE_PROD.xlsx · dados sincronizados automaticamente do SharePoint via Supabase</footer>
+  <footer>Painel de controle de produção · dados sincronizados automaticamente do Google Sheets via Supabase</footer>
 </div>
 
 <script>
@@ -204,6 +225,7 @@ const STAGE_ORDER = ['SERR','PINT MET','PROD','IMPRE 3D','USIN ISO','PREP ART','
 let currentData = [...DEMO_DATA];
 let pollTimer = null;
 let charts = {};
+let clienteFiltro = '';
 
 const $ = (id) => document.getElementById(id);
 
@@ -234,6 +256,7 @@ function computeMetrics(data){
     qtdeFin: Number(r['QTDE FIN'])||0,
     pct: normPct(r['% CONCLUSÃO']),
     status: normStatus(r['STATUS']),
+    cliente: (r['CLIENTE']||'').toString().trim(),
     obs: r['OBS']||''
   })).filter(r => r.etapa);
 
@@ -277,8 +300,71 @@ function computeMetrics(data){
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
 
+function renderClienteList(data){
+  const counts = {};
+  data.forEach(r=>{
+    const c = (r['CLIENTE']||'').toString().trim() || '(sem cliente)';
+    counts[c] = (counts[c]||0) + 1;
+  });
+  const entries = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
+
+  let html = `<div class="cliente-chip ${clienteFiltro===''?'active':''}" data-cliente="">
+      <span class="name">Todos os clientes</span><span class="cnt">${data.length}</span></div>`;
+  html += entries.map(([nome,cnt])=>`
+    <div class="cliente-chip ${clienteFiltro===nome?'active':''}" data-cliente="${nome.replace(/"/g,'&quot;')}">
+      <span class="name">${nome}</span><span class="cnt">${cnt}</span>
+    </div>`).join('');
+
+  $('clienteList').innerHTML = html;
+  $('clienteList').querySelectorAll('.cliente-chip').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      clienteFiltro = el.dataset.cliente;
+      render(currentData);
+    });
+  });
+}
+
+function renderEtapaDonuts(m){
+  const el = $('etapaDonuts');
+  el.innerHTML = m.byEtapa.map((e,i)=>`
+    <div class="etapa-card">
+      <h4>${e.etapa}</h4>
+      <div class="mini-chart"><canvas id="etapaCanvas${i}"></canvas></div>
+      <div class="mini-legend">
+        <div><span class="dot" style="background:#5aab86;"></span>Finalizado — ${e.finalizado}</div>
+        <div><span class="dot" style="background:#e3a544;"></span>Andamento — ${e.andamento}</div>
+        <div><span class="dot" style="background:#c96a5a;"></span>Pendente — ${e.pendente}</div>
+      </div>
+    </div>
+  `).join('') || '<p style="color:#8b93a1;font-size:12.5px;">Nenhuma etapa encontrada.</p>';
+
+  if(charts.etapaDonuts) charts.etapaDonuts.forEach(c=>c.destroy());
+  charts.etapaDonuts = m.byEtapa.map((e,i)=>{
+    const ctx = document.getElementById('etapaCanvas'+i).getContext('2d');
+    return new Chart(ctx, {
+      type:'doughnut',
+      data:{
+        labels:['Finalizado','Andamento','Pendente'],
+        datasets:[{data:[e.finalizado,e.andamento,e.pendente], backgroundColor:['#5aab86','#e3a544','#c96a5a'], borderColor:'#20252d', borderWidth:2}]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{display:false} } }
+    });
+  });
+}
+
 function render(data){
-  const m = computeMetrics(data);
+  const clienteFilteredData = clienteFiltro ? data.filter(r => (r['CLIENTE']||'').toString().trim() === clienteFiltro) : data;
+
+  const etapaSel = $('fEtapa') ? $('fEtapa').value : '';
+  const statusSel = $('fStatus') ? $('fStatus').value : '';
+
+  let filteredData = clienteFilteredData;
+  if(etapaSel) filteredData = filteredData.filter(r => (r['ETAPA']||'').toString().trim().toUpperCase() === etapaSel);
+  if(statusSel) filteredData = filteredData.filter(r => normStatus(r['STATUS']) === statusSel);
+
+  const m = computeMetrics(filteredData);
+  // lista de etapas do dropdown não pode encolher quando um filtro já está ativo
+  const mDropdown = (etapaSel || statusSel) ? computeMetrics(clienteFilteredData) : m;
 
   $('lastRowsInfo').textContent = `${m.rows.length} registros de etapa · ${m.itensCount} itens · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
   $('kpiConclusao').textContent = fmtPct(m.conclusaoGeral);
@@ -287,30 +373,10 @@ function render(data){
   $('kpiCompletos').textContent = m.itensCompletos;
   $('kpiNaoIniciados').textContent = m.itensNaoIniciados;
 
-  // chart etapas (stacked)
-  const ctx1 = $('chartEtapas').getContext('2d');
-  if(charts.etapas) charts.etapas.destroy();
-  charts.etapas = new Chart(ctx1, {
-    type:'bar',
-    data:{
-      labels: m.byEtapa.map(e=>e.etapa),
-      datasets:[
-        {label:'Finalizado', data:m.byEtapa.map(e=>e.finalizado), backgroundColor:'#5aab86', stack:'s'},
-        {label:'Andamento', data:m.byEtapa.map(e=>e.andamento), backgroundColor:'#e3a544', stack:'s'},
-        {label:'Pendente', data:m.byEtapa.map(e=>e.pendente), backgroundColor:'#c96a5a', stack:'s'}
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ x:{stacked:true, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1'}}, y:{stacked:true, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1'}} },
-      plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
-    }
-  });
-
-  // donut
-  const ctx2 = $('chartDonut').getContext('2d');
-  if(charts.donut) charts.donut.destroy();
-  charts.donut = new Chart(ctx2, {
+  // donut geral (Produção total)
+  const ctxTotal = $('chartTotal').getContext('2d');
+  if(charts.total) charts.total.destroy();
+  charts.total = new Chart(ctxTotal, {
     type:'doughnut',
     data:{
       labels:['Finalizado','Andamento','Pendente'],
@@ -321,6 +387,9 @@ function render(data){
       plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
     }
   });
+
+  renderClienteList(data);
+  renderEtapaDonuts(m);
 
   // conclusao por etapa
   const ctx3 = $('chartConclusao').getContext('2d');
@@ -346,7 +415,7 @@ function render(data){
   // filtro etapas dropdown
   const fEtapa = $('fEtapa');
   const cur = fEtapa.value;
-  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + m.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
+  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + mDropdown.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
   fEtapa.value = cur;
 
   renderTable(m.rows);
@@ -379,9 +448,10 @@ function renderTable(rows){
   `).join('') || '<tr><td colspan="7" style="color:#8b93a1;">Nenhum resultado.</td></tr>';
 }
 
-['fEtapa','fStatus','fBusca'].forEach(id=>{
-  $(id).addEventListener('input', ()=> renderTable(window._metrics.rows));
+['fEtapa','fStatus'].forEach(id=>{
+  $(id).addEventListener('input', ()=> render(currentData));
 });
+$('fBusca').addEventListener('input', ()=> renderTable(window._metrics.rows));
 
 // ---- Config: Supabase ----
 // Preencha estas duas constantes antes de publicar (o Claude Code local faz isso pra você
