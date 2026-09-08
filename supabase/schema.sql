@@ -1,0 +1,30 @@
+-- Rode este script uma vez no Supabase: painel do projeto -> SQL Editor -> New query -> colar -> Run
+
+create table if not exists producao (
+  id bigint generated always as identity primary key,
+  cod text,
+  descr text,
+  qtde numeric,
+  fluxo_prod text,
+  descr_fluxo text,
+  etapa text,
+  qtde_fin numeric,
+  pct_conclusao numeric,
+  status text,
+  cliente text,
+  obs text,
+  synced_at timestamptz default now()
+);
+
+-- Ativa Row Level Security (protege a tabela) e libera SOMENTE leitura pública.
+-- Escrita só é possível com a chave "service_role", que fica guardada em segredo
+-- no GitHub Actions e nunca é exposta no navegador.
+alter table producao enable row level security;
+
+drop policy if exists "Leitura publica" on producao;
+create policy "Leitura publica"
+  on producao for select
+  using (true);
+
+-- Habilita o Realtime (o painel recebe atualização instantânea quando a tabela muda)
+alter publication supabase_realtime add table producao;

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Produção — Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#14171c;
+    --panel:#1c2027;
+    --panel-2:#20252d;
+    --line:#2c313b;
+    --text:#e8eaee;
+    --muted:#8b93a1;
+    --amber:#e3a544;
+    --amber-dim:#e3a54422;
+    --green:#5aab86;
+    --green-dim:#5aab8622;
+    --red:#c96a5a;
+    --red-dim:#c96a5a22;
+    --blue:#5a8fc9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:20px;}
+  .brand-eyebrow{color:var(--amber);font-size:12.5px;font-weight:600;letter-spacing:.02em;margin-bottom:6px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:600;margin:0;letter-spacing:-.01em;}
+  .subtitle{color:var(--muted);font-size:14px;margin-top:6px;}
+
+  .source-box{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .dot.live{background:var(--green);box-shadow:0 0 0 3px var(--green-dim);}
+  .dot.demo{background:var(--amber);box-shadow:0 0 0 3px var(--amber-dim);}
+  .dot.err{background:var(--red);box-shadow:0 0 0 3px var(--red-dim);}
+  .cfg-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
+  .cfg-btn:hover{border-color:var(--amber);}
+
+  /* config panel */
+  #cfgPanel{display:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:26px;}
+  #cfgPanel.open{display:block;}
+  #cfgPanel h3{margin:0 0 4px;font-size:15px;font-family:'Space Grotesk',sans-serif;}
+  #cfgPanel p{color:var(--muted);font-size:13px;line-height:1.55;margin:4px 0 16px;}
+  .cfg-grid{display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:12px;margin-bottom:14px;}
+  .cfg-grid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;}
+  .cfg-grid input, .cfg-grid select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:9px 10px;font-size:13px;font-family:inherit;}
+  .cfg-actions{display:flex;gap:10px;align-items:center;}
+  .btn-primary{background:var(--amber);color:#1a1406;border:none;border-radius:7px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:inherit;}
+  .cfg-msg{font-size:12.5px;margin-top:10px;}
+  .cfg-msg.err{color:var(--red);}
+  .cfg-msg.ok{color:var(--green);}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px;}
+  .kpi .val{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:600;line-height:1;}
+  .kpi .lbl{color:var(--muted);font-size:12.5px;margin-top:8px;}
+  .kpi.accent .val{color:var(--amber);}
+
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 20px 12px;}
+  .panel h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 2px;}
+  .panel .desc{color:var(--muted);font-size:12.5px;margin:0 0 14px;}
+  .chart-box{position:relative;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:500;font-size:11.5px;text-transform:none;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  .tbl-scroll{max-height:360px;overflow-y:auto;}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge.FINALIZADO{background:var(--green-dim);color:var(--green);}
+  .badge.ANDAMENTO{background:var(--amber-dim);color:var(--amber);}
+  .badge.PENDENTE{background:var(--red-dim);color:var(--red);}
+
+  .filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .filters select, .filters input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;}
+
+  footer{color:var(--muted);font-size:12px;margin-top:30px;text-align:center;}
+
+  @media(max-width:860px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+    .cfg-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">CONTROLE DE PRODUÇÃO</div>
+      <h1>Painel de Acompanhamento — Acervo Natalino</h1>
+      <div class="subtitle" id="lastRowsInfo">carregando dados…</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+      <div class="source-box"><span class="dot demo" id="statusDot"></span><span id="statusText">usando dados de exemplo</span></div>
+      <button class="cfg-btn" id="cfgToggle">Conectar ao Supabase ⚙</button>
+    </div>
+  </header>
+
+  <div id="cfgPanel">
+    <h3>Conectar à base de dados (Supabase)</h3>
+    <p>
+      Ninguém precisa fazer login para ver este painel — os dados chegam de uma cópia mantida atualizada
+      automaticamente a partir do SharePoint (veja o robô de sincronização no GitHub Actions do projeto).
+      Normalmente estes dois campos já vêm preenchidos no arquivo <code>public/index.html</code> antes do deploy;
+      use este painel só para testar rapidamente com outro projeto Supabase.
+    </p>
+    <div class="cfg-grid" style="grid-template-columns:2fr 2fr 1fr;">
+      <div>
+        <label>Supabase URL do projeto</label>
+        <input type="text" id="inSupaUrl" placeholder="https://xxxxxxxx.supabase.co">
+      </div>
+      <div>
+        <label>Supabase anon key (pública)</label>
+        <input type="text" id="inSupaKey" placeholder="eyJhbGciOi....">
+      </div>
+      <div>
+        <label>Se o Realtime falhar, buscar a cada</label>
+        <select id="inInterval">
+          <option value="30">30 segundos</option>
+          <option value="60" selected>1 minuto</option>
+          <option value="300">5 minutos</option>
+        </select>
+      </div>
+    </div>
+    <div class="cfg-actions">
+      <button class="btn-primary" id="btnConnect">Conectar</button>
+      <button class="btn-ghost" id="btnDemo">Usar dados de exemplo</button>
+    </div>
+    <div class="cfg-msg" id="cfgMsg"></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi accent"><div class="val" id="kpiConclusao">–</div><div class="lbl">% conclusão geral (peças)</div></div>
+    <div class="kpi"><div class="val" id="kpiTotalPecas">–</div><div class="lbl">peças planejadas</div></div>
+    <div class="kpi"><div class="val" id="kpiItens">–</div><div class="lbl">itens únicos em produção</div></div>
+    <div class="kpi"><div class="val" id="kpiCompletos">–</div><div class="lbl">itens 100% finalizados</div></div>
+    <div class="kpi"><div class="val" id="kpiNaoIniciados">–</div><div class="lbl">itens sem nenhuma etapa iniciada</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Andamento por etapa</h2>
+      <p class="desc">Quantidade de peças por status em cada etapa do fluxo produtivo — mostra onde o volume está parado.</p>
+      <div class="chart-box" style="height:300px;"><canvas id="chartEtapas"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Status geral</h2>
+      <p class="desc">Distribuição de todas as etapas registradas na planilha.</p>
+      <div class="chart-box" style="height:300px;"><canvas id="chartDonut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>% de conclusão por etapa</h2>
+    <p class="desc">Etapas abaixo da linha pontilhada (50%) são os principais gargalos da produção agora.</p>
+    <div class="chart-box" style="height:260px;"><canvas id="chartConclusao"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>Itens que precisam de atenção</h2>
+    <p class="desc">Etapas com menor % de conclusão — ordenadas da mais crítica para a menos crítica.</p>
+    <div class="filters">
+      <select id="fEtapa"><option value="">Todas as etapas</option></select>
+      <select id="fStatus">
+        <option value="">Todos os status</option>
+        <option value="PENDENTE">Pendente</option>
+        <option value="ANDAMENTO">Andamento</option>
+        <option value="FINALIZADO">Finalizado</option>
+      </select>
+      <input type="text" id="fBusca" placeholder="Buscar item…">
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Etapa</th><th>Qtde</th><th>Finalizado</th><th>%</th><th>Status</th><th>Obs</th></tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Painel gerado a partir de CONTROLE_PROD.xlsx · dados sincronizados automaticamente do SharePoint via Supabase</footer>
+</div>
+
+<script>
+const DEMO_DATA = [{"COD": 50, "DESCR": "ARCO COMETA ILUMINADO 3D - 3,50M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 6, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "TERCEIRIZADO"}, {"COD": 50, "DESCR": "ARCO COMETA ILUMINADO 3D - 3,50M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 2, "% CONCLUSÃO": 0.3333333333333333, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/6"}, {"COD": 50, "DESCR": "ARCO COMETA ILUMINADO 3D - 3,50M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 2, "DESCR": "ARVORE DE NATAL CONICA COM PASSAGEM 3D - 20,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "CONFIRMAR COM VINI"}, {"COD": 2, "DESCR": "ARVORE DE NATAL CONICA COM PASSAGEM 3D - 20,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 2, "DESCR": "ARVORE DE NATAL CONICA COM PASSAGEM 3D - 20,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 3, "DESCR": "ARVORE DE PRESENTES 3D - 9,00M ", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "TERCEIRIZADO"}, {"COD": 3, "DESCR": "ARVORE DE PRESENTES 3D - 9,00M ", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 3, "DESCR": "ARVORE DE PRESENTES 3D - 9,00M ", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 22, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,00M", "QTDE": 8, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 8, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PROPRIO"}, {"COD": 22, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,00M", "QTDE": 8, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 6, "% CONCLUSÃO": 0.75, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 6/8"}, {"COD": 22, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,00M", "QTDE": 8, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 6, "% CONCLUSÃO": 0.75, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 6/8"}, {"COD": 23, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 4, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PROPRIO"}, {"COD": 23, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 4, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 23, "DESCR": "CAIXA DE PRESENTE ILUMINADA INCLINADA 3D - 1,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 4, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 77, "DESCR": "MEIA BOLA DE NATAL ESTRELADA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "TERCEIRIZADO"}, {"COD": 77, "DESCR": "MEIA BOLA DE NATAL ESTRELADA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 77, "DESCR": "MEIA BOLA DE NATAL ESTRELADA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 35, "DESCR": "PORTAL CAIXA DE PRESENTE GIGANTE INTERATIVO 3D - 3,50M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PROPRIO"}, {"COD": 35, "DESCR": "PORTAL CAIXA DE PRESENTE GIGANTE INTERATIVO 3D - 3,50M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 35, "DESCR": "PORTAL CAIXA DE PRESENTE GIGANTE INTERATIVO 3D - 3,50M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 100, "DESCR": "ORNAMENTO PARA POSTE ESTRELA CADENTE COM FITA 2D - 1,20M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 20, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "TERCEIRIZADO"}, {"COD": 100, "DESCR": "ORNAMENTO PARA POSTE ESTRELA CADENTE COM FITA 2D - 1,20M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 15, "% CONCLUSÃO": 0.75, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 15/20"}, {"COD": 100, "DESCR": "ORNAMENTO PARA POSTE ESTRELA CADENTE COM FITA 2D - 1,20M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 15, "% CONCLUSÃO": 0.75, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 15/20"}, {"COD": 240, "DESCR": "ORNAMENTO PARA POSTE LAÇO NATALINO TRADICIONAL 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 20, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "TERCEIRIZADO"}, {"COD": 240, "DESCR": "ORNAMENTO PARA POSTE LAÇO NATALINO TRADICIONAL 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 20, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 240, "DESCR": "ORNAMENTO PARA POSTE LAÇO NATALINO TRADICIONAL 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 20, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": "?", "DESCR": "CAIXA COM LAÇO GIGANTE", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PEND CAIXA"}, {"COD": "?", "DESCR": "CAIXA COM LAÇO GIGANTE", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": "?", "DESCR": "CAIXA COM LAÇO GIGANTE", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 111, "DESCR": "ESCULTURA CENOGRAFICA TRENO REAL COM RENA INTERATIVA 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 90, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,50M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 90, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,50M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 90, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,50M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 2, "% CONCLUSÃO": 0.2, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/10"}, {"COD": 91, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 91, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 91, "DESCR": "ORNAMENTO FLOCO DE NEVE GLACIAL 2D - 1,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 2, "% CONCLUSÃO": 0.2, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/10"}, {"COD": "?", "DESCR": "ESTALACTITE", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 6, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": "?", "DESCR": "ESTALACTITE", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": "?", "DESCR": "ESTALACTITE", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 116, "DESCR": "PORTAL BONECO DE NEVE GIGANTE COM CARTOLA INTERATIVO 3D - 6,40M", "QTDE": 2, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 2, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 116, "DESCR": "PORTAL BONECO DE NEVE GIGANTE COM CARTOLA INTERATIVO 3D - 6,40M", "QTDE": 2, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 116, "DESCR": "PORTAL BONECO DE NEVE GIGANTE COM CARTOLA INTERATIVO 3D - 6,40M", "QTDE": 2, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 127, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL CLASSICO 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 127, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL CLASSICO 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 3/10"}, {"COD": 127, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL CLASSICO 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 5, "% CONCLUSÃO": 0.5, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 3/10 CORPO"}, {"COD": 128, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 128, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 3/10"}, {"COD": 128, "DESCR": "ESCULTURA CENOGRAFICA ANJO MUSICO MONUMENTAL 3D - 3,00M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 5, "% CONCLUSÃO": 0.5, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 3/10 CORPO"}, {"COD": 209, "DESCR": "ORNAMENTO NATALINO PARA POSTE ANJO COM TROMBETA ILUMINADO 2D - 1,20 x 2,20M", "QTDE": 12, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 12, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 209, "DESCR": "ORNAMENTO NATALINO PARA POSTE ANJO COM TROMBETA ILUMINADO 2D - 1,20 x 2,20M", "QTDE": 12, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 4, "% CONCLUSÃO": 0.3333333333333333, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 4/12"}, {"COD": 209, "DESCR": "ORNAMENTO NATALINO PARA POSTE ANJO COM TROMBETA ILUMINADO 2D - 1,20 x 2,20M", "QTDE": 12, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 92, "DESCR": "CONJUNTO DE ESTRELAS RADIANTES CENOGRAFICAS 3D - 2,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 4, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 92, "DESCR": "CONJUNTO DE ESTRELAS RADIANTES CENOGRAFICAS 3D - 2,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "RETRABALHO"}, {"COD": 92, "DESCR": "CONJUNTO DE ESTRELAS RADIANTES CENOGRAFICAS 3D - 2,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 52, "DESCR": "PORTAL CENOGRAFICO ARCO COMETA RADIANTE INTERATIVO 3D - 3,50 x 6,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 4, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 52, "DESCR": "PORTAL CENOGRAFICO ARCO COMETA RADIANTE INTERATIVO 3D - 3,50 x 6,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 2, "% CONCLUSÃO": 0.5, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/4"}, {"COD": 52, "DESCR": "PORTAL CENOGRAFICO ARCO COMETA RADIANTE INTERATIVO 3D - 3,50 x 6,50M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 2, "% CONCLUSÃO": 0.5, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/4 - PEND MANGUEIRA"}, {"COD": 48, "DESCR": "PORTAL NATALINO CENOGRAFICO ILUMINADO COM FLOCOS DE NEVE - 3,00 x 3,50 x 0,40M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 6, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 48, "DESCR": "PORTAL NATALINO CENOGRAFICO ILUMINADO COM FLOCOS DE NEVE - 3,00 x 3,50 x 0,40M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 6, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 48, "DESCR": "PORTAL NATALINO CENOGRAFICO ILUMINADO COM FLOCOS DE NEVE - 3,00 x 3,50 x 0,40M", "QTDE": 6, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 2, "% CONCLUSÃO": 0.3333333333333333, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 2/6"}, {"COD": 105, "DESCR": "ORNAMENTO CENOGRAFICO PINGENTE COM ESTRELA RADIANTE 2D - 1,20M", "QTDE": 40, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 40, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 105, "DESCR": "ORNAMENTO CENOGRAFICO PINGENTE COM ESTRELA RADIANTE 2D - 1,20M", "QTDE": 40, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 38, "% CONCLUSÃO": 0.95, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 38/40"}, {"COD": 105, "DESCR": "ORNAMENTO CENOGRAFICO PINGENTE COM ESTRELA RADIANTE 2D - 1,20M", "QTDE": 40, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 38, "% CONCLUSÃO": 0.95, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN  38/40"}, {"COD": 103, "DESCR": "ORNAMENTO ESTRELA DUPLA RADIANTE 2D - 1,20 x 0,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 103, "DESCR": "ORNAMENTO ESTRELA DUPLA RADIANTE 2D - 1,20 x 0,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 103, "DESCR": "ORNAMENTO ESTRELA DUPLA RADIANTE 2D - 1,20 x 0,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 104, "DESCR": "ORNAMENTO ESTRELA CRUZADA EM X 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 0.5, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 10/20"}, {"COD": 104, "DESCR": "ORNAMENTO ESTRELA CRUZADA EM X 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 6, "% CONCLUSÃO": 0.3, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 6/20"}, {"COD": 104, "DESCR": "ORNAMENTO ESTRELA CRUZADA EM X 2D - 1,00M", "QTDE": 20, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 6, "% CONCLUSÃO": 0.3, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 6/20"}, {"COD": "?", "DESCR": "LETREIRO FELIZ NATAL", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "2UND"}, {"COD": "?", "DESCR": "LETREIRO FELIZ NATAL", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "2UND"}, {"COD": "?", "DESCR": "LETREIRO FELIZ NATAL", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "2UND"}, {"COD": 156, "DESCR": "PRESEPIO CENOGRAFICO MONUMENTAL 3D - SAGRADA FAMILIA COMPLETA", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 156, "DESCR": "PRESEPIO CENOGRAFICO MONUMENTAL 3D - SAGRADA FAMILIA COMPLETA", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 156, "DESCR": "PRESEPIO CENOGRAFICO MONUMENTAL 3D - SAGRADA FAMILIA COMPLETA", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 13, "DESCR": "ARVORE NATALINA CONICA ESPIRAL ILUMINADA - 3,00M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 3, "% CONCLUSÃO": 0.75, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 3/4"}, {"COD": 13, "DESCR": "ARVORE NATALINA CONICA ESPIRAL ILUMINADA - 3,00M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 1, "% CONCLUSÃO": 0.25, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 1/4"}, {"COD": 13, "DESCR": "ARVORE NATALINA CONICA ESPIRAL ILUMINADA - 3,00M", "QTDE": 4, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 1, "% CONCLUSÃO": 0.25, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 1/4 - NECESSIDADE DE ADICIONAR FERRO PARA ABRAÇADEIRA"}, {"COD": 41, "DESCR": "PORTAL CAIXA DE PRESENTE ILUMINADO 3D - 3,70M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PEND LAÇO"}, {"COD": 41, "DESCR": "PORTAL CAIXA DE PRESENTE ILUMINADO 3D - 3,70M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 41, "DESCR": "PORTAL CAIXA DE PRESENTE ILUMINADO 3D - 3,70M", "QTDE": 1, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 84, "DESCR": "BOLA NATALINA CENOGRAFICA ILUMINADA VAZADA 2D - 1,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "SERR", "QTDE FIN": 10, "% CONCLUSÃO": 1.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PEND COROA/ DESCRIÇÃO 3D"}, {"COD": 84, "DESCR": "BOLA NATALINA CENOGRAFICA ILUMINADA VAZADA 2D - 1,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PINT MET", "QTDE FIN": 6, "% CONCLUSÃO": 0.6, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "FIN 6/10"}, {"COD": 84, "DESCR": "BOLA NATALINA CENOGRAFICA ILUMINADA VAZADA 2D - 1,20M", "QTDE": 10, "FLUXO PROD": 1, "DESCR FLUXO": "SERR/ PINT MET/ PROD", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "SERR", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT MET", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PROD", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 115, "DESCR": "CENARIO CENOGRAFICO URSOS PESCADORES NO GELO 3D - 2,50M", "QTDE": 1, "FLUXO PROD": 6, "DESCR FLUXO": "SERR/ PINT MET/ PROD/ USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 113, "DESCR": "ESCULTURA CENOGRAFICA PAPAI NOEL COM SACO DE PRESENTES 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "DEFINIR SACO DE PRESENTES"}, {"COD": 113, "DESCR": "ESCULTURA CENOGRAFICA PAPAI NOEL COM SACO DE PRESENTES 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": "DEFINIR SACO DE PRESENTES"}, {"COD": 113, "DESCR": "ESCULTURA CENOGRAFICA PAPAI NOEL COM SACO DE PRESENTES 3D - 3,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 112, "DESCR": "ESCULTURA CENOGRAFICA MAMAE NOEL 3D - 4,00M", "QTDE": 1, "FLUXO PROD": 9, "DESCR FLUXO": "USIN ISO/ IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 112, "DESCR": "ESCULTURA CENOGRAFICA MAMAE NOEL 3D - 4,00M", "QTDE": 1, "FLUXO PROD": 9, "DESCR FLUXO": "USIN ISO/ IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 112, "DESCR": "ESCULTURA CENOGRAFICA MAMAE NOEL 3D - 4,00M", "QTDE": 1, "FLUXO PROD": 9, "DESCR FLUXO": "USIN ISO/ IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 112, "DESCR": "ESCULTURA CENOGRAFICA MAMAE NOEL 3D - 4,00M", "QTDE": 1, "FLUXO PROD": 9, "DESCR FLUXO": "USIN ISO/ IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 132, "DESCR": "RENA DE MARSHMALLOW - 2,50M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 132, "DESCR": "RENA DE MARSHMALLOW - 2,50M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 132, "DESCR": "RENA DE MARSHMALLOW - 2,50M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 147, "DESCR": "MENINO JESUS - PRESEPIO MINIMALISTA - 1,20M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": "RETRABALHO"}, {"COD": 147, "DESCR": "MENINO JESUS - PRESEPIO MINIMALISTA - 1,20M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 147, "DESCR": "MENINO JESUS - PRESEPIO MINIMALISTA - 1,20M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 148, "DESCR": "SÃO JOSE - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 148, "DESCR": "SÃO JOSE - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 148, "DESCR": "SÃO JOSE - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 149, "DESCR": "REI MAGO GASPAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 149, "DESCR": "REI MAGO GASPAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 149, "DESCR": "REI MAGO GASPAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 150, "DESCR": "REI MAGO BELCHIOR - PRESEPIO MINIMALISTA - 1,80M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 150, "DESCR": "REI MAGO BELCHIOR - PRESEPIO MINIMALISTA - 1,80M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 150, "DESCR": "REI MAGO BELCHIOR - PRESEPIO MINIMALISTA - 1,80M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 151, "DESCR": "REI MAGO BALTAZAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 151, "DESCR": "REI MAGO BALTAZAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 151, "DESCR": "REI MAGO BALTAZAR - PRESEPIO MINIMALISTA - 2,00M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 152, "DESCR": "NOSSA SENHORA - PRESEPIO MINIMALISTA - 1,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 152, "DESCR": "NOSSA SENHORA - PRESEPIO MINIMALISTA - 1,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 152, "DESCR": "NOSSA SENHORA - PRESEPIO MINIMALISTA - 1,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 153, "DESCR": "ESTRELA DO ORIENTE - PRESEPIO MINIMALISTA - 2,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "USIN ISO", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 153, "DESCR": "ESTRELA DO ORIENTE - PRESEPIO MINIMALISTA - 2,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 153, "DESCR": "ESTRELA DO ORIENTE - PRESEPIO MINIMALISTA - 2,60M", "QTDE": 1, "FLUXO PROD": 4, "DESCR FLUXO": "USIN ISO/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE VOANDO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE VOANDO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE VOANDO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENDE SENTADO 01", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENDE SENTADO 01", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENDE SENTADO 01", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE SENTADO 02", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE SENTADO 02", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "DUENTE SENTADO 02", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "RENA ARCO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "RENA ARCO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 129, "DESCR": "RENA ARCO", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 177, "DESCR": "BONECO DE NEVE COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 177, "DESCR": "BONECO DE NEVE COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 177, "DESCR": "BONECO DE NEVE COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 178, "DESCR": "BONECO DE NEVE COM GORRO E CACHECOL AZUL ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 178, "DESCR": "BONECO DE NEVE COM GORRO E CACHECOL AZUL ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 178, "DESCR": "BONECO DE NEVE COM GORRO E CACHECOL AZUL ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 176, "DESCR": "BONECO DE NEVE COM GORRO DE INVERNO ESCULTURA CENOGRAFICA 3D - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 176, "DESCR": "BONECO DE NEVE COM GORRO DE INVERNO ESCULTURA CENOGRAFICA 3D - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 176, "DESCR": "BONECO DE NEVE COM GORRO DE INVERNO ESCULTURA CENOGRAFICA 3D - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 179, "DESCR": "BONECO DE NEVE COM GORRO NATALINO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 179, "DESCR": "BONECO DE NEVE COM GORRO NATALINO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 179, "DESCR": "BONECO DE NEVE COM GORRO NATALINO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 117, "DESCR": "CENARIO CENOGRAFICO ICEBERG FLUTUANTE COM PINGUIM 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 117, "DESCR": "CENARIO CENOGRAFICO ICEBERG FLUTUANTE COM PINGUIM 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": "PINGUIM FINALIZADO/ ENTENDER SE SERA FEITO O CENARIO"}, {"COD": 117, "DESCR": "CENARIO CENOGRAFICO ICEBERG FLUTUANTE COM PINGUIM 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 126, "DESCR": "CENARIO CENOGRAFICO DUENDE DECORADOR E RENA DE NATAL 3D - 2,20M (DUENDE)", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 126, "DESCR": "CENARIO CENOGRAFICO DUENDE DECORADOR E RENA DE NATAL 3D - 2,20M (DUENDE)", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": "RENA E DUENDE"}, {"COD": 126, "DESCR": "CENARIO CENOGRAFICO DUENDE DECORADOR E RENA DE NATAL 3D - 2,20M (DUENDE)", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 133, "DESCR": "DUENDE COMENDO DOCE - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 133, "DESCR": "DUENDE COMENDO DOCE - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 133, "DESCR": "DUENDE COMENDO DOCE - 0,60M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 169, "DESCR": "PINGUIM COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 0,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 169, "DESCR": "PINGUIM COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 0,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 169, "DESCR": "PINGUIM COM PROTETOR AURICULAR ESCULTURA CENOGRAFICA 3D - 0,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 173, "DESCR": "PINGUIM SNOWBOARDER ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 173, "DESCR": "PINGUIM SNOWBOARDER ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 173, "DESCR": "PINGUIM SNOWBOARDER ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 118, "DESCR": "PINGUIM JOGANDO BOLA DE NEVE ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 118, "DESCR": "PINGUIM JOGANDO BOLA DE NEVE ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 118, "DESCR": "PINGUIM JOGANDO BOLA DE NEVE ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 119, "DESCR": "PINGUIM PEQUENO ", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 119, "DESCR": "PINGUIM PEQUENO ", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 119, "DESCR": "PINGUIM PEQUENO ", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 170, "DESCR": "PINGUIM JOGADOR DE HOQUEI ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 170, "DESCR": "PINGUIM JOGADOR DE HOQUEI ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 170, "DESCR": "PINGUIM JOGADOR DE HOQUEI ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 171, "DESCR": "PINGUIM JOGADOR DE HOQUEI EM MOVIMENTO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 171, "DESCR": "PINGUIM JOGADOR DE HOQUEI EM MOVIMENTO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 171, "DESCR": "PINGUIM JOGADOR DE HOQUEI EM MOVIMENTO ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 168, "DESCR": "PINGUIM PATINADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 168, "DESCR": "PINGUIM PATINADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 168, "DESCR": "PINGUIM PATINADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "ANDAMENTO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 172, "DESCR": "PINGUIM ESQUIADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 172, "DESCR": "PINGUIM ESQUIADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 172, "DESCR": "PINGUIM ESQUIADOR ESCULTURA CENOGRAFICA 3D - 1,20M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 0, "% CONCLUSÃO": 0.0, "STATUS": "PENDENTE", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 120, "DESCR": "SOLDADINHO DE CHUMBO 3D - 2,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "IMPRE 3D", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 120, "DESCR": "SOLDADINHO DE CHUMBO 3D - 2,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PREP ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}, {"COD": 120, "DESCR": "SOLDADINHO DE CHUMBO 3D - 2,40M", "QTDE": 1, "FLUXO PROD": 3, "DESCR FLUXO": "IMPRE 3D/ PREP ART/ PINT ART", "ETAPA": "PINT ART", "QTDE FIN": 1, "% CONCLUSÃO": 1.0, "STATUS": "FINALIZADO", "CLIENTE": "ACERVO - PCT 01", "OBS": ""}];
+</script>
+
+<script>
+const STAGE_ORDER = ['SERR','PINT MET','PROD','IMPRE 3D','USIN ISO','PREP ART','PINT ART'];
+let currentData = [...DEMO_DATA];
+let pollTimer = null;
+let charts = {};
+
+const $ = (id) => document.getElementById(id);
+
+function setStatusDot(mode, text){
+  const dot = $('statusDot');
+  dot.className = 'dot ' + mode;
+  $('statusText').textContent = text;
+}
+
+function normStatus(s){
+  if(!s) return 'PENDENTE';
+  s = String(s).trim().toUpperCase();
+  return s;
+}
+
+function normPct(v){
+  if(v === '' || v === null || v === undefined) return 0;
+  let n = typeof v === 'number' ? v : parseFloat(String(v).replace('%','').replace(',','.'));
+  if(isNaN(n)) return 0;
+  if(n > 1.5) n = n/100;
+  return n;
+}
+
+function computeMetrics(data){
+  const rows = data.map(r => ({
+    cod: r['COD'], descr: r['DESCR'], qtde: Number(r['QTDE'])||0,
+    etapa: (r['ETAPA']||'').toString().trim().toUpperCase(),
+    qtdeFin: Number(r['QTDE FIN'])||0,
+    pct: normPct(r['% CONCLUSÃO']),
+    status: normStatus(r['STATUS']),
+    obs: r['OBS']||''
+  })).filter(r => r.etapa);
+
+  const totalQtde = rows.reduce((a,r)=>a+r.qtde,0);
+  const totalFin = rows.reduce((a,r)=>a+r.qtdeFin,0);
+  const conclusaoGeral = totalQtde ? (totalFin/totalQtde*100) : 0;
+
+  const byItem = {};
+  rows.forEach(r=>{
+    if(!byItem[r.cod]) byItem[r.cod] = [];
+    byItem[r.cod].push(r);
+  });
+  const itens = Object.values(byItem);
+  const itensCompletos = itens.filter(g => g.every(r=>r.status==='FINALIZADO')).length;
+  const itensNaoIniciados = itens.filter(g => g.every(r=>r.status==='PENDENTE')).length;
+
+  const etapasSet = [...new Set(rows.map(r=>r.etapa))];
+  const etapasOrdered = STAGE_ORDER.filter(e=>etapasSet.includes(e)).concat(etapasSet.filter(e=>!STAGE_ORDER.includes(e)));
+
+  const byEtapa = etapasOrdered.map(etapa=>{
+    const rs = rows.filter(r=>r.etapa===etapa);
+    const q = rs.reduce((a,r)=>a+r.qtde,0);
+    const qf = rs.reduce((a,r)=>a+r.qtdeFin,0);
+    return {
+      etapa,
+      pendente: rs.filter(r=>r.status==='PENDENTE').length,
+      andamento: rs.filter(r=>r.status==='ANDAMENTO').length,
+      finalizado: rs.filter(r=>r.status==='FINALIZADO').length,
+      pct: q ? (qf/q*100) : 0
+    };
+  });
+
+  const statusCounts = {
+    FINALIZADO: rows.filter(r=>r.status==='FINALIZADO').length,
+    ANDAMENTO: rows.filter(r=>r.status==='ANDAMENTO').length,
+    PENDENTE: rows.filter(r=>r.status==='PENDENTE').length
+  };
+
+  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
+}
+
+function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
+
+function render(data){
+  const m = computeMetrics(data);
+
+  $('lastRowsInfo').textContent = `${m.rows.length} registros de etapa · ${m.itensCount} itens · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+  $('kpiConclusao').textContent = fmtPct(m.conclusaoGeral);
+  $('kpiTotalPecas').textContent = m.totalQtde;
+  $('kpiItens').textContent = m.itensCount;
+  $('kpiCompletos').textContent = m.itensCompletos;
+  $('kpiNaoIniciados').textContent = m.itensNaoIniciados;
+
+  // chart etapas (stacked)
+  const ctx1 = $('chartEtapas').getContext('2d');
+  if(charts.etapas) charts.etapas.destroy();
+  charts.etapas = new Chart(ctx1, {
+    type:'bar',
+    data:{
+      labels: m.byEtapa.map(e=>e.etapa),
+      datasets:[
+        {label:'Finalizado', data:m.byEtapa.map(e=>e.finalizado), backgroundColor:'#5aab86', stack:'s'},
+        {label:'Andamento', data:m.byEtapa.map(e=>e.andamento), backgroundColor:'#e3a544', stack:'s'},
+        {label:'Pendente', data:m.byEtapa.map(e=>e.pendente), backgroundColor:'#c96a5a', stack:'s'}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ x:{stacked:true, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1'}}, y:{stacked:true, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1'}} },
+      plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
+    }
+  });
+
+  // donut
+  const ctx2 = $('chartDonut').getContext('2d');
+  if(charts.donut) charts.donut.destroy();
+  charts.donut = new Chart(ctx2, {
+    type:'doughnut',
+    data:{
+      labels:['Finalizado','Andamento','Pendente'],
+      datasets:[{data:[m.statusCounts.FINALIZADO, m.statusCounts.ANDAMENTO, m.statusCounts.PENDENTE], backgroundColor:['#5aab86','#e3a544','#c96a5a'], borderColor:'#1c2027', borderWidth:3}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
+    }
+  });
+
+  // conclusao por etapa
+  const ctx3 = $('chartConclusao').getContext('2d');
+  if(charts.concl) charts.concl.destroy();
+  charts.concl = new Chart(ctx3, {
+    type:'bar',
+    data:{
+      labels:m.byEtapa.map(e=>e.etapa),
+      datasets:[{
+        label:'% conclusão',
+        data:m.byEtapa.map(e=>e.pct.toFixed(1)),
+        backgroundColor:m.byEtapa.map(e=> e.pct<50 ? '#c96a5a' : '#5aab86'),
+        borderRadius:5
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{display:false}, ticks:{color:'#8b93a1'}}, y:{min:0,max:100, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1', callback:v=>v+'%'}} },
+      plugins:{ legend:{display:false} }
+    }
+  });
+
+  // filtro etapas dropdown
+  const fEtapa = $('fEtapa');
+  const cur = fEtapa.value;
+  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + m.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
+  fEtapa.value = cur;
+
+  renderTable(m.rows);
+  window._metrics = m;
+}
+
+function renderTable(rows){
+  const etapaF = $('fEtapa').value;
+  const statusF = $('fStatus').value;
+  const buscaF = $('fBusca').value.trim().toLowerCase();
+
+  let filtered = rows.filter(r=>{
+    if(etapaF && r.etapa !== etapaF) return false;
+    if(statusF && r.status !== statusF) return false;
+    if(buscaF && !String(r.descr).toLowerCase().includes(buscaF)) return false;
+    return true;
+  });
+  filtered.sort((a,b)=> a.pct - b.pct);
+
+  $('tblBody').innerHTML = filtered.slice(0,300).map(r=>`
+    <tr>
+      <td>${r.descr}</td>
+      <td>${r.etapa}</td>
+      <td>${r.qtde}</td>
+      <td>${r.qtdeFin}</td>
+      <td>${(r.pct*100).toFixed(0)}%</td>
+      <td><span class="badge ${r.status}">${r.status}</span></td>
+      <td style="color:#8b93a1;">${r.obs||''}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="color:#8b93a1;">Nenhum resultado.</td></tr>';
+}
+
+['fEtapa','fStatus','fBusca'].forEach(id=>{
+  $(id).addEventListener('input', ()=> renderTable(window._metrics.rows));
+});
+
+// ---- Config: Supabase ----
+// Preencha estas duas constantes antes de publicar (o Claude Code local faz isso pra você
+// depois que o projeto Supabase existir). São valores PÚBLICOS por design — protegidos
+// pela política de "somente leitura" (RLS) criada em supabase/schema.sql.
+const SUPABASE_URL_DEFAULT = 'https://nfeqopcxiyzhacocsfzn.supabase.co';
+const SUPABASE_ANON_KEY_DEFAULT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZXFvcGN4aXl6aGFjb2NzZnpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjQ4MjEsImV4cCI6MjEwNDQ0MDgyMX0.NKu3Sv-PjxO2cLTo_1-TAmylu0zxNODlQBZJ0x0pnds';
+
+$('cfgToggle').addEventListener('click', ()=> $('cfgPanel').classList.toggle('open'));
+
+let supa = null;
+let realtimeChannel = null;
+
+function mapSupabaseRow(r){
+  return {
+    'COD': r.cod, 'DESCR': r.descr, 'QTDE': r.qtde,
+    'FLUXO PROD': r.fluxo_prod, 'DESCR FLUXO': r.descr_fluxo, 'ETAPA': r.etapa,
+    'QTDE FIN': r.qtde_fin, '% CONCLUSÃO': r.pct_conclusao, 'STATUS': r.status,
+    'CLIENTE': r.cliente, 'OBS': r.obs
+  };
+}
+
+async function loadFromSupabase(){
+  const { data, error } = await supa.from('producao').select('*');
+  if(error) throw error;
+  if(!data.length) throw new Error('A tabela "producao" está vazia — confira se o sincronizador (GitHub Actions) já rodou pelo menos uma vez.');
+  return data.map(mapSupabaseRow);
+}
+
+async function connectLive(url, key, fallbackIntervalSec){
+  const msg = $('cfgMsg');
+  try{
+    setStatusDot('demo', 'conectando…');
+    supa = window.supabase.createClient(url, key);
+
+    currentData = await loadFromSupabase();
+    render(currentData);
+    setStatusDot('live', 'conectado ao Supabase · atualização em tempo real');
+    msg.className = 'cfg-msg ok';
+    msg.textContent = 'Conectado! O painel vai se atualizar sozinho assim que os dados mudarem.';
+
+    if(realtimeChannel) supa.removeChannel(realtimeChannel);
+    realtimeChannel = supa.channel('producao-changes')
+      .on('postgres_changes', { event:'*', schema:'public', table:'producao' }, async ()=>{
+        try{ currentData = await loadFromSupabase(); render(currentData); }catch(e){}
+      })
+      .subscribe();
+
+    // rede de segurança: se o realtime cair por algum motivo, busca de novo periodicamente
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async ()=>{
+      try{ currentData = await loadFromSupabase(); render(currentData); }
+      catch(e){ /* silencioso — o realtime é a via principal */ }
+    }, fallbackIntervalSec*1000);
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('supaUrl', url);
+    params.set('supaKey', key);
+    history.replaceState(null, '', '?' + params.toString());
+  }catch(e){
+    setStatusDot('err', 'não foi possível conectar');
+    msg.className = 'cfg-msg err';
+    msg.textContent = 'Erro: ' + e.message;
+  }
+}
+
+$('btnConnect').addEventListener('click', ()=>{
+  const url = $('inSupaUrl').value.trim();
+  const key = $('inSupaKey').value.trim();
+  const interval = parseInt($('inInterval').value,10);
+  if(!url || !key){
+    $('cfgMsg').className='cfg-msg err';
+    $('cfgMsg').textContent='Preencha a URL e a anon key do Supabase.';
+    return;
+  }
+  connectLive(url, key, interval);
+});
+
+$('btnDemo').addEventListener('click', ()=>{
+  if(pollTimer) clearInterval(pollTimer);
+  if(realtimeChannel && supa) supa.removeChannel(realtimeChannel);
+  currentData = [...DEMO_DATA];
+  render(currentData);
+  setStatusDot('demo', 'usando dados de exemplo');
+  $('cfgMsg').className='cfg-msg';
+  $('cfgMsg').textContent='';
+});
+
+// Ordem de prioridade ao carregar: parâmetro na URL > constantes preenchidas no arquivo > demo
+(function init(){
+  render(currentData);
+  const params = new URLSearchParams(window.location.search);
+  const url = params.get('supaUrl') || SUPABASE_URL_DEFAULT;
+  const key = params.get('supaKey') || SUPABASE_ANON_KEY_DEFAULT;
+  if(url) $('inSupaUrl').value = url;
+  if(key) $('inSupaKey').value = key;
+  if(url && key){
+    connectLive(url, key, 60);
+  }
+})();
+</script>
+</body>
+</html>

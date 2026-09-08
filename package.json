@@ -1,0 +1,6 @@
+{
+  "name": "painel-controle-producao",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel de BI para controle de produção, sincronizado automaticamente com o Google Sheets via Supabase, hospedado no Vercel."
+}
