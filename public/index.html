@@ -192,6 +192,12 @@
     <div class="chart-box" style="height:260px;"><canvas id="chartConclusao"></canvas></div>
   </div>
 
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Projeção de conclusão</h2>
+    <p class="desc">% de conclusão geral registrado a cada dia — um ponto por dia de sincronização.</p>
+    <div class="chart-box" style="height:220px;"><canvas id="chartProjecao"></canvas></div>
+  </div>
+
   <div class="panel">
     <h2>Itens que precisam de atenção</h2>
     <p class="desc">Etapas com menor % de conclusão — ordenadas da mais crítica para a menos crítica.</p>
@@ -221,8 +227,19 @@ const DEMO_DATA = [{"COD": 50, "DESCR": "ARCO COMETA ILUMINADO 3D - 3,50M", "QTD
 </script>
 
 <script>
+const DEMO_HISTORICO = [
+  {data:'2026-09-03', pct_conclusao:38},
+  {data:'2026-09-04', pct_conclusao:44},
+  {data:'2026-09-05', pct_conclusao:51},
+  {data:'2026-09-06', pct_conclusao:58},
+  {data:'2026-09-07', pct_conclusao:63},
+  {data:'2026-09-08', pct_conclusao:68},
+  {data:'2026-09-09', pct_conclusao:71}
+];
+
 const STAGE_ORDER = ['SERR','PINT MET','PROD','IMPRE 3D','USIN ISO','PREP ART','PINT ART'];
 let currentData = [...DEMO_DATA];
+let currentHistorico = [...DEMO_HISTORICO];
 let pollTimer = null;
 let charts = {};
 let clienteFiltro = '';
@@ -299,6 +316,29 @@ function computeMetrics(data){
 }
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
+
+function renderProjecao(historico){
+  const ordenado = [...historico].sort((a,b)=> a.data.localeCompare(b.data));
+  const ctx = $('chartProjecao').getContext('2d');
+  if(charts.projecao) charts.projecao.destroy();
+  charts.projecao = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: ordenado.map(h=> new Date(h.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})),
+      datasets:[{
+        label:'% conclusão geral',
+        data: ordenado.map(h=> Number(h.pct_conclusao)||0),
+        borderColor:'#e3a544', backgroundColor:'#e3a54422',
+        tension:0.3, fill:true, pointRadius:3, pointBackgroundColor:'#e3a544'
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{display:false}, ticks:{color:'#8b93a1'}}, y:{min:0,max:100, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1', callback:v=>v+'%'}} },
+      plugins:{ legend:{display:false} }
+    }
+  });
+}
 
 function renderClienteList(data){
   const counts = {};
@@ -419,6 +459,7 @@ function render(data){
   fEtapa.value = cur;
 
   renderTable(m.rows);
+  renderProjecao(currentHistorico);
   window._metrics = m;
 }
 
@@ -481,6 +522,12 @@ async function loadFromSupabase(){
   return data.map(mapSupabaseRow);
 }
 
+async function loadHistoricoFromSupabase(){
+  const { data, error } = await supa.from('producao_historico').select('data, pct_conclusao').order('data', {ascending:true});
+  if(error) throw error;
+  return data;
+}
+
 async function connectLive(url, key, fallbackIntervalSec){
   const msg = $('cfgMsg');
   try{
@@ -488,6 +535,7 @@ async function connectLive(url, key, fallbackIntervalSec){
     supa = window.supabase.createClient(url, key);
 
     currentData = await loadFromSupabase();
+    try{ currentHistorico = await loadHistoricoFromSupabase(); }catch(e){ /* historico é extra, nao bloqueia o painel */ }
     render(currentData);
     setStatusDot('live', 'conectado ao Supabase · atualização em tempo real');
     msg.className = 'cfg-msg ok';
@@ -498,12 +546,19 @@ async function connectLive(url, key, fallbackIntervalSec){
       .on('postgres_changes', { event:'*', schema:'public', table:'producao' }, async ()=>{
         try{ currentData = await loadFromSupabase(); render(currentData); }catch(e){}
       })
+      .on('postgres_changes', { event:'*', schema:'public', table:'producao_historico' }, async ()=>{
+        try{ currentHistorico = await loadHistoricoFromSupabase(); render(currentData); }catch(e){}
+      })
       .subscribe();
 
     // rede de segurança: se o realtime cair por algum motivo, busca de novo periodicamente
     if(pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(async ()=>{
-      try{ currentData = await loadFromSupabase(); render(currentData); }
+      try{
+        currentData = await loadFromSupabase();
+        try{ currentHistorico = await loadHistoricoFromSupabase(); }catch(e){}
+        render(currentData);
+      }
       catch(e){ /* silencioso — o realtime é a via principal */ }
     }, fallbackIntervalSec*1000);
 
@@ -534,6 +589,7 @@ $('btnDemo').addEventListener('click', ()=>{
   if(pollTimer) clearInterval(pollTimer);
   if(realtimeChannel && supa) supa.removeChannel(realtimeChannel);
   currentData = [...DEMO_DATA];
+  currentHistorico = [...DEMO_HISTORICO];
   render(currentData);
   setStatusDot('demo', 'usando dados de exemplo');
   $('cfgMsg').className='cfg-msg';

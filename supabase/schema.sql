@@ -28,3 +28,24 @@ create policy "Leitura publica"
 
 -- Habilita o Realtime (o painel recebe atualização instantânea quando a tabela muda)
 alter publication supabase_realtime add table producao;
+
+-- Historico diario do % de conclusao geral, usado no grafico de projecao do painel.
+-- Uma linha por dia (chave unica em "data") -- cada sincronizacao do dia atualiza a
+-- mesma linha em vez de criar uma nova.
+create table if not exists producao_historico (
+  id bigint generated always as identity primary key,
+  data date not null unique,
+  qtde_total numeric,
+  qtde_fin_total numeric,
+  pct_conclusao numeric,
+  registrado_em timestamptz default now()
+);
+
+alter table producao_historico enable row level security;
+
+drop policy if exists "Leitura publica" on producao_historico;
+create policy "Leitura publica"
+  on producao_historico for select
+  using (true);
+
+alter publication supabase_realtime add table producao_historico;

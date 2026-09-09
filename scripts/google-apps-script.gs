@@ -7,7 +7,9 @@
 // mais recentemente modificado, converte automaticamente para uma Google Sheet
 // temporaria, le a aba "Plan Prod" (o arquivo precisa ter uma aba com esse
 // nome exato, senao o script falha alto em vez de ler a aba errada), grava
-// tudo no Supabase e apaga a Sheet temporaria em seguida. Se o arquivo mais
+// tudo no Supabase e apaga a Sheet temporaria em seguida. Tambem grava um
+// snapshot do % de conclusao geral do dia em "producao_historico" (uma linha
+// por dia -- usada pelo grafico de projecao do painel). Se o arquivo mais
 // recente ja foi processado antes (mesmo ID + mesma data de modificacao), nao
 // faz nada -- ou seja, o PCP so precisa postar o .xlsx na pasta, sem nenhuma
 // acao manual extra.
@@ -60,6 +62,7 @@ function sincronizar() {
     const linhas = lerPlanilha_(planilhaTemp);
     Logger.log('Encontradas ' + linhas.length + ' linhas. Gravando no Supabase...');
     substituirTabelaSupabase_(linhas);
+    gravarHistoricoSupabase_(linhas);
     props.setProperty('ULTIMO_PROCESSADO', chaveProcessado);
     Logger.log('Sincronizacao concluida com sucesso.');
   } finally {
@@ -179,6 +182,37 @@ function substituirTabelaSupabase_(linhas) {
     if (respIns.getResponseCode() >= 300) {
       throw new Error('Falha ao inserir dados: ' + respIns.getContentText());
     }
+  }
+}
+
+function gravarHistoricoSupabase_(linhas) {
+  const qtdeTotal = linhas.reduce(function(a, r) { return a + r.qtde; }, 0);
+  const qtdeFinTotal = linhas.reduce(function(a, r) { return a + r.qtde_fin; }, 0);
+  const pctConclusao = qtdeTotal ? (qtdeFinTotal / qtdeTotal * 100) : 0;
+  const hoje = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+  const base = SUPABASE_URL.replace(/\/$/, '');
+  const headers = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY,
+    'Content-Type': 'application/json',
+    Prefer: 'resolution=merge-duplicates,return=minimal',
+  };
+
+  // Upsert: uma linha por dia. Se ja existir uma linha de hoje, atualiza; senao, cria.
+  const resp = UrlFetchApp.fetch(base + '/rest/v1/producao_historico?on_conflict=data', {
+    method: 'post',
+    headers: headers,
+    payload: JSON.stringify([{
+      data: hoje,
+      qtde_total: qtdeTotal,
+      qtde_fin_total: qtdeFinTotal,
+      pct_conclusao: pctConclusao,
+    }]),
+    muteHttpExceptions: true,
+  });
+  if (resp.getResponseCode() >= 300) {
+    throw new Error('Falha ao gravar historico: ' + resp.getContentText());
   }
 }
 
