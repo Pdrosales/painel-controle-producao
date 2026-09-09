@@ -317,27 +317,96 @@ function computeMetrics(data){
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
 
+// Regressao linear simples (minimos quadrados) sobre o historico real, em dias
+// desde o primeiro registro. Retorna null se nao houver pelo menos 2 pontos ou
+// se o ritmo nao for de avanco (estagnado/regressivo) -- nunca inventa tendencia.
+function calcularTendenciaLinear_(historicoOrdenado){
+  if(historicoOrdenado.length < 2) return null;
+  const dia0 = new Date(historicoOrdenado[0].data+'T00:00:00').getTime();
+  const xs = historicoOrdenado.map(h => (new Date(h.data+'T00:00:00').getTime() - dia0) / 86400000);
+  const ys = historicoOrdenado.map(h => Number(h.pct_conclusao) || 0);
+  const n = xs.length;
+  const sumX = xs.reduce((a,b)=>a+b,0);
+  const sumY = ys.reduce((a,b)=>a+b,0);
+  const sumXY = xs.reduce((a,x,i)=>a+x*ys[i],0);
+  const sumXX = xs.reduce((a,x)=>a+x*x,0);
+  const denom = n*sumXX - sumX*sumX;
+  if(denom === 0) return null;
+  const slope = (n*sumXY - sumX*sumY) / denom;
+  const intercept = (sumY - slope*sumX) / n;
+  if(slope <= 0) return null;
+  return {dia0, slope, intercept};
+}
+
 function renderProjecao(historico){
-  const ordenado = [...historico].sort((a,b)=> a.data.localeCompare(b.data));
+  const real = [...historico].sort((a,b)=> a.data.localeCompare(b.data));
+  const tendencia = calcularTendenciaLinear_(real);
+  const hoje = new Date();
+  const fimDoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+
+  // estende a partir do ultimo dia real, no ritmo calculado, ate bater 100% ou o fim do mes
+  const datasFuturas = [];
+  const projetadoPorData = {};
+  if(tendencia && real.length){
+    let cursor = new Date(real[real.length-1].data + 'T00:00:00');
+    while(true){
+      cursor = new Date(cursor.getTime() + 86400000);
+      const diaIdx = (cursor.getTime() - tendencia.dia0) / 86400000;
+      const pct = Math.min(100, tendencia.intercept + tendencia.slope * diaIdx);
+      const dataStr = cursor.toISOString().slice(0,10);
+      datasFuturas.push(dataStr);
+      projetadoPorData[dataStr] = pct;
+      if(pct >= 100 || cursor >= fimDoMes) break;
+    }
+  }
+
+  const datasReais = real.map(h => h.data);
+  const todasDatas = datasReais.concat(datasFuturas);
+  const ultimaDataReal = datasReais[datasReais.length-1];
+
+  const valoresReais = todasDatas.map(d => {
+    const item = real.find(h => h.data === d);
+    return item ? (Number(item.pct_conclusao)||0) : null;
+  });
+  const valoresProjetados = todasDatas.map(d => {
+    if(d === ultimaDataReal) return valoresReais[todasDatas.indexOf(d)]; // conecta visualmente as duas linhas
+    return projetadoPorData.hasOwnProperty(d) ? projetadoPorData[d] : null;
+  });
+
   const ctx = $('chartProjecao').getContext('2d');
   if(charts.projecao) charts.projecao.destroy();
   charts.projecao = new Chart(ctx, {
     type:'line',
     data:{
-      labels: ordenado.map(h=> new Date(h.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})),
-      datasets:[{
-        label:'% conclusão geral',
-        data: ordenado.map(h=> Number(h.pct_conclusao)||0),
-        borderColor:'#e3a544', backgroundColor:'#e3a54422',
-        tension:0.3, fill:true, pointRadius:3, pointBackgroundColor:'#e3a544'
-      }]
+      labels: todasDatas.map(d => new Date(d+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})),
+      datasets:[
+        {
+          label:'% conclusão real',
+          data: valoresReais,
+          borderColor:'#e3a544', backgroundColor:'#e3a54422',
+          tension:0.3, fill:true, pointRadius:3, pointBackgroundColor:'#e3a544'
+        },
+        {
+          label:'Projeção (tendência)',
+          data: valoresProjetados,
+          borderColor:'#8b93a1', backgroundColor:'transparent',
+          borderDash:[6,4], tension:0.3, fill:false, pointRadius:2, pointBackgroundColor:'#8b93a1'
+        }
+      ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
       scales:{ x:{grid:{display:false}, ticks:{color:'#8b93a1'}}, y:{min:0,max:100, grid:{color:'#2c313b'}, ticks:{color:'#8b93a1', callback:v=>v+'%'}} },
-      plugins:{ legend:{display:false} }
+      plugins:{ legend:{display:true, position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
     }
   });
+
+  const descEl = $('chartProjecao').closest('.panel').querySelector('.desc');
+  if(descEl){
+    descEl.textContent = tendencia
+      ? 'Linha cheia: % de conclusão real por dia. Linha pontilhada: projeção com base no ritmo médio de avanço já registrado — não inventa dados, só extrapola a tendência real.'
+      : 'Histórico real por dia (linha cheia). Ainda não há pelo menos 2 dias de histórico acumulado para calcular uma tendência de projeção — isso aparece sozinho conforme os dias passam.';
+  }
 }
 
 function renderClienteList(data){
