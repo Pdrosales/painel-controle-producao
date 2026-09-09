@@ -1,41 +1,97 @@
-/**
- * Sincroniza a aba "Plan Prod" desta planilha Google Sheets com a tabela `producao`
- * no Supabase. Roda automaticamente dentro do próprio Google (sem servidor externo,
- * sem GitHub, sem Azure), usando um gatilho de tempo.
- *
- * COMO INSTALAR (uma vez só):
- * 1. Nesta planilha, vá em Extensões > Apps Script.
- * 2. Apague TODO o conteúdo de exemplo (inclusive a linha "function myFunction() {")
- *    e cole este arquivo inteiro no lugar.
- * 3. Preencha SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY abaixo com os valores do
- *    seu projeto Supabase (Project Settings > API Keys > Legacy API Keys > service_role,
- *    uma string longa que começa com "eyJ..." — NÃO use a chave no formato novo
- *    "sb_secret_...", ela é rejeitada pelo Supabase quando usada fora de um servidor).
- *    Esse código só é visível para quem você convidar como editor deste projeto de
- *    script — não fica público.
- * 4. No menu de cima, troque a função selecionada para "criarGatilho" e clique em
- *    Executar (▶). Na primeira vez, o Google vai pedir para autorizar o script
- *    (é a sua própria conta autorizando a si mesma — normal, clique em Avançar >
- *    Permitir).
- * 5. Pronto: a partir daí, "sincronizar" roda sozinha a cada 15 minutos.
- *
- * Para rodar manualmente e testar: selecione a função "sincronizar" e clique em ▶.
- */
+// Sincroniza a producao com o Supabase automaticamente a partir de um .xlsx
+// postado numa pasta do Google Drive -- sem precisar converter manualmente
+// para Google Sheets nem editar planilha nenhuma.
+//
+// COMO FUNCIONA:
+// A cada execucao, o script varre a pasta do Drive (ID_DA_PASTA), pega o .xlsx
+// mais recentemente modificado, converte automaticamente para uma Google Sheet
+// temporaria, le a aba "Plan Prod" (ou a primeira aba, se nao achar esse nome),
+// grava tudo no Supabase e apaga a Sheet temporaria em seguida. Se o arquivo
+// mais recente ja foi processado antes (mesmo ID + mesma data de modificacao),
+// nao faz nada -- ou seja, o PCP so precisa postar o .xlsx na pasta, sem
+// nenhuma acao manual extra.
+//
+// COMO INSTALAR (uma vez so):
+// 1. Em https://script.google.com, clique em "Novo projeto" (este projeto NAO
+//    precisa ficar dentro de nenhuma planilha -- e um projeto avulso).
+// 2. Apague o conteudo de exemplo (inclusive a linha "function myFunction() {")
+//    e COLE (Ctrl+V) este arquivo inteiro no lugar -- nao digite manualmente.
+// 3. No menu a esquerda, clique em "Servicos" (icone +) e adicione o servico
+//    avancado "Drive API". Se pedir para habilitar tambem no Google Cloud
+//    Console associado, confirme.
+// 4. Preencha ID_DA_PASTA, SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY abaixo:
+//    - ID_DA_PASTA: abra a pasta "CENA-PROD" no Drive e copie o trecho da URL
+//      depois de "/folders/" (ex: .../folders/ESSE_ID_AQUI).
+//    - SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY: Project Settings > API Keys >
+//      Legacy API Keys > service_role (string longa que comeca com "eyJ...",
+//      NAO use a chave nova "sb_secret_...").
+// 5. No menu de cima, troque a funcao selecionada para "criarGatilho" e clique
+//    em Executar. Na primeira vez o Google vai pedir autorizacao (permita).
+// 6. Pronto: a partir daí "sincronizar" roda sozinha a cada 15 minutos, mas so
+//    processa de verdade quando ha um .xlsx novo na pasta.
+//
+// Para rodar manualmente e testar: selecione a funcao "sincronizar" e clique
+// em Executar.
 
+const ID_DA_PASTA = 'COLE_AQUI_O_ID_DA_PASTA_CENA-PROD_NO_DRIVE';
 const SUPABASE_URL = 'COLE_AQUI_A_PROJECT_URL_DO_SUPABASE';
 const SUPABASE_SERVICE_ROLE_KEY = 'COLE_AQUI_A_SERVICE_ROLE_KEY_LEGADA_DO_SUPABASE';
 const NOME_DA_ABA = 'Plan Prod';
+const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function sincronizar() {
-  const linhas = lerPlanilha_();
-  Logger.log('Encontradas ' + linhas.length + ' linhas. Gravando no Supabase...');
-  substituirTabelaSupabase_(linhas);
-  Logger.log('Sincronizacao concluida com sucesso.');
+  const arquivo = encontrarXlsxMaisRecente_();
+  if (!arquivo) {
+    Logger.log('Nenhum .xlsx encontrado na pasta.');
+    return;
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const chaveProcessado = arquivo.getId() + '|' + arquivo.getLastUpdated().getTime();
+  if (props.getProperty('ULTIMO_PROCESSADO') === chaveProcessado) {
+    Logger.log('Arquivo "' + arquivo.getName() + '" ja foi processado. Nada a fazer.');
+    return;
+  }
+
+  Logger.log('Processando "' + arquivo.getName() + '"...');
+  const planilhaTemp = converterParaGoogleSheets_(arquivo);
+  try {
+    const linhas = lerPlanilha_(planilhaTemp);
+    Logger.log('Encontradas ' + linhas.length + ' linhas. Gravando no Supabase...');
+    substituirTabelaSupabase_(linhas);
+    props.setProperty('ULTIMO_PROCESSADO', chaveProcessado);
+    Logger.log('Sincronizacao concluida com sucesso.');
+  } finally {
+    DriveApp.getFileById(planilhaTemp.getId()).setTrashed(true);
+  }
 }
 
-function lerPlanilha_() {
-  const aba = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(NOME_DA_ABA);
-  if (!aba) throw new Error('Nao encontrei uma aba chamada ' + NOME_DA_ABA);
+function encontrarXlsxMaisRecente_() {
+  const pasta = DriveApp.getFolderById(ID_DA_PASTA);
+  const arquivos = pasta.getFilesByType(MIME_XLSX);
+  let maisRecente = null;
+  while (arquivos.hasNext()) {
+    const arquivo = arquivos.next();
+    if (!maisRecente || arquivo.getLastUpdated() > maisRecente.getLastUpdated()) {
+      maisRecente = arquivo;
+    }
+  }
+  return maisRecente;
+}
+
+function converterParaGoogleSheets_(arquivoXlsx) {
+  const recurso = {
+    title: arquivoXlsx.getName() + ' (convertido automaticamente)',
+    parents: [{ id: ID_DA_PASTA }],
+    mimeType: MimeType.GOOGLE_SHEETS,
+  };
+  const convertido = Drive.Files.insert(recurso, arquivoXlsx.getBlob());
+  return SpreadsheetApp.openById(convertido.id);
+}
+
+function lerPlanilha_(planilha) {
+  const aba = planilha.getSheetByName(NOME_DA_ABA) || planilha.getSheets()[0];
+  if (!aba) throw new Error('A planilha convertida nao tem nenhuma aba.');
 
   const valores = aba.getDataRange().getValues();
 
@@ -92,7 +148,7 @@ function substituirTabelaSupabase_(linhas) {
     'Content-Type': 'application/json',
   };
 
-  // Apaga tudo (espelho completo a cada sincronização)
+  // Apaga tudo (espelho completo a cada sincronizacao)
   const respDel = UrlFetchApp.fetch(base + '/rest/v1/producao?id=gt.0', {
     method: 'delete',
     headers: headers,
