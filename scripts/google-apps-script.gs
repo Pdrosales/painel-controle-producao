@@ -90,8 +90,15 @@ function converterParaGoogleSheets_(arquivoXlsx) {
 }
 
 function lerPlanilha_(planilha) {
-  const aba = planilha.getSheetByName(NOME_DA_ABA) || planilha.getSheets()[0];
-  if (!aba) throw new Error('A planilha convertida nao tem nenhuma aba.');
+  const aba = planilha.getSheetByName(NOME_DA_ABA);
+  if (!aba) {
+    const abasDisponiveis = planilha.getSheets().map(function(s) { return s.getName(); }).join(', ');
+    throw new Error(
+      'Nao encontrei uma aba chamada "' + NOME_DA_ABA + '" no arquivo. ' +
+      'Abas disponiveis: ' + abasDisponiveis + '. ' +
+      'Renomeie a aba correta para "' + NOME_DA_ABA + '" e suba o arquivo de novo.'
+    );
+  }
 
   const valores = aba.getDataRange().getValues();
 
