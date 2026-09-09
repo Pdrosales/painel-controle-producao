@@ -5,11 +5,12 @@
 // COMO FUNCIONA:
 // A cada execucao, o script varre a pasta do Drive (ID_DA_PASTA), pega o .xlsx
 // mais recentemente modificado, converte automaticamente para uma Google Sheet
-// temporaria, le a aba "Plan Prod" (ou a primeira aba, se nao achar esse nome),
-// grava tudo no Supabase e apaga a Sheet temporaria em seguida. Se o arquivo
-// mais recente ja foi processado antes (mesmo ID + mesma data de modificacao),
-// nao faz nada -- ou seja, o PCP so precisa postar o .xlsx na pasta, sem
-// nenhuma acao manual extra.
+// temporaria, le a aba "Plan Prod" (o arquivo precisa ter uma aba com esse
+// nome exato, senao o script falha alto em vez de ler a aba errada), grava
+// tudo no Supabase e apaga a Sheet temporaria em seguida. Se o arquivo mais
+// recente ja foi processado antes (mesmo ID + mesma data de modificacao), nao
+// faz nada -- ou seja, o PCP so precisa postar o .xlsx na pasta, sem nenhuma
+// acao manual extra.
 //
 // COMO INSTALAR (uma vez so):
 // 1. Em https://script.google.com, clique em "Novo projeto" (este projeto NAO
