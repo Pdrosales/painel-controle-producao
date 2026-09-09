@@ -8,9 +8,11 @@
 // temporaria, le a aba "Plan Prod" (o arquivo precisa ter uma aba com esse
 // nome exato, senao o script falha alto em vez de ler a aba errada), grava
 // tudo no Supabase e apaga a Sheet temporaria em seguida. Tambem grava um
-// snapshot do % de conclusao geral do dia em "producao_historico" (uma linha
-// por dia -- usada pelo grafico de projecao do painel). Se o arquivo mais
-// recente ja foi processado antes (mesmo ID + mesma data de modificacao), nao
+// snapshot do % de conclusao do dia em "producao_historico" -- uma linha
+// "TOTAL" com a producao inteira e uma linha por etapa (SERR, PINT MET, ...),
+// usadas pelo grafico de projecao do painel (inclusive quando filtrado por
+// etapa). Se o arquivo mais recente ja foi processado antes (mesmo ID + mesma
+// data de modificacao), nao
 // faz nada -- ou seja, o PCP so precisa postar o .xlsx na pasta, sem nenhuma
 // acao manual extra.
 //
@@ -186,10 +188,38 @@ function substituirTabelaSupabase_(linhas) {
 }
 
 function gravarHistoricoSupabase_(linhas) {
+  const hoje = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+
+  // Agrupa por etapa (uma linha de historico por etapa por dia).
+  const porEtapa = {};
+  linhas.forEach(function(r) {
+    const etapa = r.etapa || '(SEM ETAPA)';
+    if (!porEtapa[etapa]) porEtapa[etapa] = { qtde: 0, qtdeFin: 0 };
+    porEtapa[etapa].qtde += r.qtde;
+    porEtapa[etapa].qtdeFin += r.qtde_fin;
+  });
+
+  const linhasHistorico = Object.keys(porEtapa).map(function(etapa) {
+    const g = porEtapa[etapa];
+    return {
+      data: hoje,
+      etapa: etapa,
+      qtde_total: g.qtde,
+      qtde_fin_total: g.qtdeFin,
+      pct_conclusao: g.qtde ? (g.qtdeFin / g.qtde * 100) : 0,
+    };
+  });
+
+  // Mais uma linha com "TOTAL" = producao inteira, todas as etapas somadas.
   const qtdeTotal = linhas.reduce(function(a, r) { return a + r.qtde; }, 0);
   const qtdeFinTotal = linhas.reduce(function(a, r) { return a + r.qtde_fin; }, 0);
-  const pctConclusao = qtdeTotal ? (qtdeFinTotal / qtdeTotal * 100) : 0;
-  const hoje = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
+  linhasHistorico.push({
+    data: hoje,
+    etapa: 'TOTAL',
+    qtde_total: qtdeTotal,
+    qtde_fin_total: qtdeFinTotal,
+    pct_conclusao: qtdeTotal ? (qtdeFinTotal / qtdeTotal * 100) : 0,
+  });
 
   const base = SUPABASE_URL.replace(/\/$/, '');
   const headers = {
@@ -199,16 +229,11 @@ function gravarHistoricoSupabase_(linhas) {
     Prefer: 'resolution=merge-duplicates,return=minimal',
   };
 
-  // Upsert: uma linha por dia. Se ja existir uma linha de hoje, atualiza; senao, cria.
-  const resp = UrlFetchApp.fetch(base + '/rest/v1/producao_historico?on_conflict=data', {
+  // Upsert: uma linha por (dia, etapa). Se ja existir, atualiza; senao, cria.
+  const resp = UrlFetchApp.fetch(base + '/rest/v1/producao_historico?on_conflict=data,etapa', {
     method: 'post',
     headers: headers,
-    payload: JSON.stringify([{
-      data: hoje,
-      qtde_total: qtdeTotal,
-      qtde_fin_total: qtdeFinTotal,
-      pct_conclusao: pctConclusao,
-    }]),
+    payload: JSON.stringify(linhasHistorico),
     muteHttpExceptions: true,
   });
   if (resp.getResponseCode() >= 300) {

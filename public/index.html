@@ -228,13 +228,18 @@ const DEMO_DATA = [{"COD": 50, "DESCR": "ARCO COMETA ILUMINADO 3D - 3,50M", "QTD
 
 <script>
 const DEMO_HISTORICO = [
-  {data:'2026-09-03', pct_conclusao:38},
-  {data:'2026-09-04', pct_conclusao:44},
-  {data:'2026-09-05', pct_conclusao:51},
-  {data:'2026-09-06', pct_conclusao:58},
-  {data:'2026-09-07', pct_conclusao:63},
-  {data:'2026-09-08', pct_conclusao:68},
-  {data:'2026-09-09', pct_conclusao:71}
+  {data:'2026-09-03', etapa:'TOTAL', pct_conclusao:38},
+  {data:'2026-09-04', etapa:'TOTAL', pct_conclusao:44},
+  {data:'2026-09-05', etapa:'TOTAL', pct_conclusao:51},
+  {data:'2026-09-06', etapa:'TOTAL', pct_conclusao:58},
+  {data:'2026-09-07', etapa:'TOTAL', pct_conclusao:63},
+  {data:'2026-09-08', etapa:'TOTAL', pct_conclusao:68},
+  {data:'2026-09-09', etapa:'TOTAL', pct_conclusao:71},
+  {data:'2026-09-05', etapa:'SERR', pct_conclusao:60},
+  {data:'2026-09-06', etapa:'SERR', pct_conclusao:70},
+  {data:'2026-09-07', etapa:'SERR', pct_conclusao:78},
+  {data:'2026-09-08', etapa:'SERR', pct_conclusao:85},
+  {data:'2026-09-09', etapa:'SERR', pct_conclusao:89}
 ];
 
 const STAGE_ORDER = ['SERR','PINT MET','PROD','IMPRE 3D','USIN ISO','PREP ART','PINT ART'];
@@ -338,8 +343,9 @@ function calcularTendenciaLinear_(historicoOrdenado){
   return {dia0, slope, intercept};
 }
 
-function renderProjecao(historico){
-  const real = [...historico].sort((a,b)=> a.data.localeCompare(b.data));
+function renderProjecao(historico, etapaFiltro){
+  const etapaAlvo = etapaFiltro || 'TOTAL';
+  const real = historico.filter(h => h.etapa === etapaAlvo).sort((a,b)=> a.data.localeCompare(b.data));
   const tendencia = calcularTendenciaLinear_(real);
   const hoje = new Date();
   const fimDoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
@@ -401,11 +407,15 @@ function renderProjecao(historico){
     }
   });
 
+  const rotuloEtapa = etapaAlvo === 'TOTAL' ? 'todas as etapas (total geral)' : 'etapa ' + etapaAlvo;
   const descEl = $('chartProjecao').closest('.panel').querySelector('.desc');
   if(descEl){
-    descEl.textContent = tendencia
-      ? 'Linha cheia: % de conclusão real por dia. Linha pontilhada: projeção com base no ritmo médio de avanço já registrado — não inventa dados, só extrapola a tendência real.'
-      : 'Histórico real por dia (linha cheia). Ainda não há pelo menos 2 dias de histórico acumulado para calcular uma tendência de projeção — isso aparece sozinho conforme os dias passam.';
+    const base = 'Mostrando: ' + rotuloEtapa + ' — segue o filtro de etapa acima; filtro de status e cliente não se aplicam aqui, pois % de conclusão já mistura os três status por definição. ';
+    descEl.textContent = base + (tendencia
+      ? 'Linha cheia: % real por dia. Linha pontilhada: projeção com base no ritmo médio já registrado — não inventa dados, só extrapola a tendência real.'
+      : (real.length
+        ? 'Ainda não há pelo menos 2 dias de histórico para calcular uma tendência — aparece sozinha conforme os dias passam.'
+        : 'Ainda não há histórico registrado para esta etapa.'));
   }
 }
 
@@ -528,7 +538,7 @@ function render(data){
   fEtapa.value = cur;
 
   renderTable(m.rows);
-  renderProjecao(currentHistorico);
+  renderProjecao(currentHistorico, etapaSel);
   window._metrics = m;
 }
 
@@ -592,7 +602,7 @@ async function loadFromSupabase(){
 }
 
 async function loadHistoricoFromSupabase(){
-  const { data, error } = await supa.from('producao_historico').select('data, pct_conclusao').order('data', {ascending:true});
+  const { data, error } = await supa.from('producao_historico').select('data, etapa, pct_conclusao').order('data', {ascending:true});
   if(error) throw error;
   return data;
 }
