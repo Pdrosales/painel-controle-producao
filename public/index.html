@@ -160,18 +160,28 @@
     <div class="cfg-msg" id="cfgMsg"></div>
   </div>
 
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Peças — visão real</h2>
+    <p class="desc" id="pecasRealDesc">Quantidade de peças de fato (1x por item), não contagem de processos/etapas. Uma peça só é "finalizada" quando chega FINALIZADO na etapa final do seu fluxo.</p>
+    <div class="chart-box" style="height:220px;"><canvas id="chartPecasReal"></canvas></div>
+    <div class="hero-stats">
+      <div><div class="v accent" id="kpiConclusao">–</div><div class="l" id="lConclusao">% concl. real (peças)</div></div>
+      <div><div class="v" id="kpiTotalPecas">–</div><div class="l">peças planejadas</div></div>
+      <div><div class="v" id="kpiPecasFinal">–</div><div class="l" id="lPecasFinal">peças finalizadas</div></div>
+      <div><div class="v" id="kpiPecasAndamento">–</div><div class="l" id="lPecasAndamento">peças em andamento</div></div>
+      <div><div class="v" id="kpiPecasNaoIniciadas">–</div><div class="l" id="lPecasNaoIniciadas">peças não iniciadas</div></div>
+    </div>
+  </div>
+
   <div class="grid2">
     <div class="panel">
-      <h2>Produção total</h2>
-      <p class="desc">Distribuição de todas as etapas registradas (todas as linhas de produção).</p>
+      <h2>Produção total (por processo)</h2>
+      <p class="desc">Distribuição de todas as etapas registradas — cada peça conta 1x por processo (SERR, PINT MET, PROD…) que passa, não é quantidade de peças.</p>
       <div class="chart-box" style="height:220px;"><canvas id="chartTotal"></canvas></div>
       <div class="hero-stats">
-        <div><div class="v accent" id="kpiConclusao">–</div><div class="l">% concl. (peças)</div></div>
-        <div><div class="v" id="kpiTotalPecas">–</div><div class="l">peças planejadas</div></div>
         <div><div class="v" id="kpiItens">–</div><div class="l">itens únicos</div></div>
-        <div><div class="v" id="kpiCompletos">–</div><div class="l">itens prontos (etapa final)</div></div>
-        <div><div class="v" id="kpiPecasFinal">–</div><div class="l">peças prontas (etapa final)</div></div>
-        <div><div class="v" id="kpiNaoIniciados">–</div><div class="l">não iniciados</div></div>
+        <div><div class="v" id="kpiCompletos">–</div><div class="l" id="lItensCompletos">itens prontos (etapa final)</div></div>
+        <div><div class="v" id="kpiNaoIniciados">–</div><div class="l" id="lItensNaoIniciados">itens não iniciados</div></div>
       </div>
     </div>
     <div class="panel">
@@ -278,7 +288,12 @@ function normPct(v){
   return n;
 }
 
-function computeMetrics(data){
+function computeMetrics(data, targetEtapas){
+  // targetEtapas: quando o usuário filtra por uma etapa específica (ex: SERR), a "conclusão"
+  // de cada peça passa a ser medida NAQUELA etapa, em vez da etapa final do fluxo. Sem filtro,
+  // usa FINAL_ETAPAS (comportamento padrão = fluxo completo).
+  const etapaFiltroUnico = (targetEtapas && targetEtapas.length === 1) ? targetEtapas[0] : null;
+  const etapasAlvo = etapaFiltroUnico ? targetEtapas : FINAL_ETAPAS;
   const rows = data.map(r => ({
     cod: r['COD'], descr: r['DESCR'], qtde: Number(r['QTDE'])||0,
     etapa: (r['ETAPA']||'').toString().trim().toUpperCase(),
@@ -289,21 +304,49 @@ function computeMetrics(data){
     obs: r['OBS']||''
   })).filter(r => r.etapa);
 
+  // soma "bruta" por linha de etapa: cada peça é contada 1x por processo que passa (SERR,
+  // PINT MET, PROD...), então NÃO é a quantidade real de peças — serve só pra acompanhar o
+  // volume de trabalho por processo (usado nos cards de "Progresso por etapa").
   const totalQtde = rows.reduce((a,r)=>a+r.qtde,0);
   const totalFin = rows.reduce((a,r)=>a+r.qtdeFin,0);
   const conclusaoGeral = totalQtde ? (totalFin/totalQtde*100) : 0;
 
+  // Agrupa por COD+DESCR (não só COD) porque vários produtos na planilha estão sem código
+  // preenchido (COD="N/A") — agrupar só por COD misturaria produtos diferentes no mesmo item.
   const byItem = {};
   rows.forEach(r=>{
-    if(!byItem[r.cod]) byItem[r.cod] = [];
-    byItem[r.cod].push(r);
+    const key = r.cod + '||' + r.descr;
+    if(!byItem[key]) byItem[key] = [];
+    byItem[key].push(r);
   });
   const itens = Object.values(byItem);
-  const itensNaoIniciados = itens.filter(g => g.every(r=>r.status==='PENDENTE')).length;
 
-  const linhasFinalizadas = rows.filter(r => FINAL_ETAPAS.includes(r.etapa) && r.status==='FINALIZADO');
-  const itensCompletos = linhasFinalizadas.length;
-  const pecasFinalizadas = linhasFinalizadas.reduce((a,r)=>a+r.qtdeFin, 0);
+  // Pra cada item, pega a linha correspondente à etapa-alvo (a etapa final do fluxo, ou a
+  // etapa selecionada no filtro). Itens cujo fluxo nem passa pela etapa-alvo ficam de fora —
+  // ex: filtrando por "PREP ART", um item que só passa por SERR/PINT MET/PROD não entra.
+  const itensNaEtapaAlvo = itens
+    .map(g => ({ g, row: g.find(r => etapasAlvo.includes(r.etapa)) }))
+    .filter(x => x.row);
+
+  const itensCompletos = itensNaEtapaAlvo.filter(x => x.row.status==='FINALIZADO').length;
+  const pecasFinalizadas = itensNaEtapaAlvo.filter(x => x.row.status==='FINALIZADO').reduce((a,x)=>a+x.row.qtdeFin, 0);
+
+  // "Não iniciada": com uma etapa específica selecionada, olha só a linha daquela etapa. Sem
+  // filtro (fluxo inteiro), só conta como não iniciado o item que não tem NENHUMA etapa com
+  // progresso — senão um item com SERR pronto e PROD pendente virava "não iniciado" errado.
+  const gruposNaoIniciados = etapaFiltroUnico
+    ? itensNaEtapaAlvo.filter(x => x.row.status==='PENDENTE').map(x=>x.g)
+    : itens.filter(g => g.every(r=>r.status==='PENDENTE'));
+  const itensNaoIniciados = gruposNaoIniciados.length;
+  const pecasNaoIniciadas = gruposNaoIniciados.reduce((a,g)=>a+g[0].qtde, 0);
+
+  // Quantidade REAL de peças: 1x por item (não por etapa/processo que ele passa). Com etapa
+  // filtrada, só conta itens cujo fluxo passa por ela; sem filtro, conta todos os itens.
+  const totalPecasReal = etapaFiltroUnico
+    ? itensNaEtapaAlvo.reduce((a,x)=>a+x.row.qtde, 0)
+    : itens.reduce((a,g)=>a+g[0].qtde, 0);
+  const pecasAndamento = Math.max(0, totalPecasReal - pecasFinalizadas - pecasNaoIniciadas);
+  const conclusaoPecasReal = totalPecasReal ? (pecasFinalizadas/totalPecasReal*100) : 0;
 
   const etapasSet = [...new Set(rows.map(r=>r.etapa))];
   const etapasOrdered = STAGE_ORDER.filter(e=>etapasSet.includes(e)).concat(etapasSet.filter(e=>!STAGE_ORDER.includes(e)));
@@ -327,7 +370,9 @@ function computeMetrics(data){
     PENDENTE: rows.filter(r=>r.status==='PENDENTE').length
   };
 
-  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, pecasFinalizadas, itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
+  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, pecasFinalizadas,
+    totalPecasReal, pecasNaoIniciadas, pecasAndamento, conclusaoPecasReal,
+    itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
 }
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
@@ -492,16 +537,47 @@ function render(data){
   if(statusSel) filteredData = filteredData.filter(r => normStatus(r['STATUS']) === statusSel);
 
   const m = computeMetrics(filteredData);
-  // lista de etapas do dropdown não pode encolher quando um filtro já está ativo
-  const mDropdown = (etapaSel || statusSel) ? computeMetrics(clienteFilteredData) : m;
+  // "Peças reais" precisam ver TODAS as etapas de cada item pra decidir onde ele está — por
+  // isso usam clienteFilteredData (não filteredData, que já cortou as outras etapas). Quando
+  // uma etapa é escolhida no filtro, essa etapa vira o critério de "pronto" (etapasAlvo);
+  // sem etapa selecionada, usa a etapa final do fluxo (padrão em computeMetrics).
+  const mReal = computeMetrics(clienteFilteredData, etapaSel ? [etapaSel] : null);
+
+  const etapaLabel = etapaSel ? etapaSel : 'etapa final';
+  $('lPecasFinal').textContent = `peças finalizadas (${etapaLabel})`;
+  $('lPecasAndamento').textContent = `peças em andamento (${etapaLabel})`;
+  $('lPecasNaoIniciadas').textContent = `peças não iniciadas (${etapaLabel})`;
+  $('lConclusao').textContent = `% concl. real (${etapaLabel})`;
+  $('lItensCompletos').textContent = `itens prontos (${etapaLabel})`;
+  $('lItensNaoIniciados').textContent = `itens não iniciados (${etapaLabel})`;
+  $('pecasRealDesc').textContent = etapaSel
+    ? `Quantidade de peças de fato (1x por item) cuja etapa "${etapaSel}" está FINALIZADO/ANDAMENTO/PENDENTE. Itens que não passam por essa etapa ficam de fora.`
+    : 'Quantidade de peças de fato (1x por item), não contagem de processos/etapas. Uma peça só é "finalizada" quando chega FINALIZADO na etapa final do seu fluxo.';
 
   $('lastRowsInfo').textContent = `${m.rows.length} registros de etapa · ${m.itensCount} itens · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
-  $('kpiConclusao').textContent = fmtPct(m.conclusaoGeral);
-  $('kpiTotalPecas').textContent = m.totalQtde;
-  $('kpiItens').textContent = m.itensCount;
-  $('kpiCompletos').textContent = m.itensCompletos;
-  $('kpiPecasFinal').textContent = m.pecasFinalizadas;
-  $('kpiNaoIniciados').textContent = m.itensNaoIniciados;
+  $('kpiConclusao').textContent = fmtPct(mReal.conclusaoPecasReal);
+  $('kpiTotalPecas').textContent = mReal.totalPecasReal;
+  $('kpiPecasFinal').textContent = mReal.pecasFinalizadas;
+  $('kpiPecasAndamento').textContent = mReal.pecasAndamento;
+  $('kpiPecasNaoIniciadas').textContent = mReal.pecasNaoIniciadas;
+  $('kpiItens').textContent = mReal.itensCount;
+  $('kpiCompletos').textContent = mReal.itensCompletos;
+  $('kpiNaoIniciados').textContent = mReal.itensNaoIniciados;
+
+  // donut peças reais (Peças — visão real) — reage à etapa selecionada no filtro (ver mReal acima)
+  const ctxPecasReal = $('chartPecasReal').getContext('2d');
+  if(charts.pecasReal) charts.pecasReal.destroy();
+  charts.pecasReal = new Chart(ctxPecasReal, {
+    type:'doughnut',
+    data:{
+      labels:['Finalizadas','Em andamento','Não iniciadas'],
+      datasets:[{data:[mReal.pecasFinalizadas, mReal.pecasAndamento, mReal.pecasNaoIniciadas], backgroundColor:['#5aab86','#e3a544','#c96a5a'], borderColor:'#1c2027', borderWidth:3}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
+    }
+  });
 
   // donut geral (Produção total)
   const ctxTotal = $('chartTotal').getContext('2d');
@@ -545,7 +621,7 @@ function render(data){
   // filtro etapas dropdown
   const fEtapa = $('fEtapa');
   const cur = fEtapa.value;
-  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + mDropdown.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
+  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + mReal.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
   fEtapa.value = cur;
 
   renderTable(m.rows);
