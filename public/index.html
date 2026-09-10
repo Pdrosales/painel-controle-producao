@@ -169,7 +169,8 @@
         <div><div class="v accent" id="kpiConclusao">–</div><div class="l">% concl. (peças)</div></div>
         <div><div class="v" id="kpiTotalPecas">–</div><div class="l">peças planejadas</div></div>
         <div><div class="v" id="kpiItens">–</div><div class="l">itens únicos</div></div>
-        <div><div class="v" id="kpiCompletos">–</div><div class="l">100% finalizados</div></div>
+        <div><div class="v" id="kpiCompletos">–</div><div class="l">itens prontos (etapa final)</div></div>
+        <div><div class="v" id="kpiPecasFinal">–</div><div class="l">peças prontas (etapa final)</div></div>
         <div><div class="v" id="kpiNaoIniciados">–</div><div class="l">não iniciados</div></div>
       </div>
     </div>
@@ -243,6 +244,12 @@ const DEMO_HISTORICO = [
 ];
 
 const STAGE_ORDER = ['SERR','PINT MET','PROD','IMPRE 3D','USIN ISO','PREP ART','PINT ART'];
+// Etapas que fecham um fluxo de produção (ver DESCR FLUXO: "SERR/PINT MET/PROD" termina em
+// PROD; os fluxos ".../PREP ART/PINT ART" terminam em PINT ART). Uma peça está pronta quando
+// a linha da sua etapa final está FINALIZADO — não exige que TODAS as etapas do item estejam
+// marcadas, pois itens sem COD preenchido (COD=N/A) ficam agrupados com outros produtos e
+// nunca bateriam 100% mesmo já finalizados.
+const FINAL_ETAPAS = ['PROD','PINT ART'];
 let currentData = [...DEMO_DATA];
 let currentHistorico = [...DEMO_HISTORICO];
 let pollTimer = null;
@@ -292,8 +299,11 @@ function computeMetrics(data){
     byItem[r.cod].push(r);
   });
   const itens = Object.values(byItem);
-  const itensCompletos = itens.filter(g => g.every(r=>r.status==='FINALIZADO')).length;
   const itensNaoIniciados = itens.filter(g => g.every(r=>r.status==='PENDENTE')).length;
+
+  const linhasFinalizadas = rows.filter(r => FINAL_ETAPAS.includes(r.etapa) && r.status==='FINALIZADO');
+  const itensCompletos = linhasFinalizadas.length;
+  const pecasFinalizadas = linhasFinalizadas.reduce((a,r)=>a+r.qtdeFin, 0);
 
   const etapasSet = [...new Set(rows.map(r=>r.etapa))];
   const etapasOrdered = STAGE_ORDER.filter(e=>etapasSet.includes(e)).concat(etapasSet.filter(e=>!STAGE_ORDER.includes(e)));
@@ -317,7 +327,7 @@ function computeMetrics(data){
     PENDENTE: rows.filter(r=>r.status==='PENDENTE').length
   };
 
-  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
+  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, pecasFinalizadas, itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
 }
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
@@ -490,6 +500,7 @@ function render(data){
   $('kpiTotalPecas').textContent = m.totalQtde;
   $('kpiItens').textContent = m.itensCount;
   $('kpiCompletos').textContent = m.itensCompletos;
+  $('kpiPecasFinal').textContent = m.pecasFinalizadas;
   $('kpiNaoIniciados').textContent = m.itensNaoIniciados;
 
   // donut geral (Produção total)
