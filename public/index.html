@@ -100,7 +100,16 @@
   .badge.PENDENTE{background:var(--red-dim);color:var(--red);}
 
   .filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-  .filters select, .filters input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;}
+  .filters input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;}
+
+  .ms-filter{position:relative;}
+  .ms-btn{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;cursor:pointer;min-width:140px;text-align:left;}
+  .ms-btn:hover{border-color:var(--amber);}
+  .ms-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px;min-width:180px;max-height:220px;overflow-y:auto;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  .ms-menu.open{display:block;}
+  .ms-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12.5px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+  .ms-opt:hover{background:var(--panel);}
+  .ms-opt input{accent-color:var(--amber);}
 
   footer{color:var(--muted);font-size:12px;margin-top:30px;text-align:center;}
 
@@ -213,13 +222,18 @@
     <h2>Itens que precisam de atenção</h2>
     <p class="desc">Etapas com menor % de conclusão — ordenadas da mais crítica para a menos crítica.</p>
     <div class="filters">
-      <select id="fEtapa"><option value="">Todas as etapas</option></select>
-      <select id="fStatus">
-        <option value="">Todos os status</option>
-        <option value="PENDENTE">Pendente</option>
-        <option value="ANDAMENTO">Andamento</option>
-        <option value="FINALIZADO">Finalizado</option>
-      </select>
+      <div class="ms-filter" id="msEtapaWrap">
+        <button type="button" class="ms-btn" id="msEtapaBtn">Todas as etapas</button>
+        <div class="ms-menu" id="msEtapaMenu"></div>
+      </div>
+      <div class="ms-filter" id="msStatusWrap">
+        <button type="button" class="ms-btn" id="msStatusBtn">Todos os status</button>
+        <div class="ms-menu" id="msStatusMenu">
+          <label class="ms-opt"><input type="checkbox" value="PENDENTE"> Pendente</label>
+          <label class="ms-opt"><input type="checkbox" value="ANDAMENTO"> Andamento</label>
+          <label class="ms-opt"><input type="checkbox" value="FINALIZADO"> Finalizado</label>
+        </div>
+      </div>
       <input type="text" id="fBusca" placeholder="Buscar item…">
     </div>
     <div class="tbl-scroll">
@@ -289,11 +303,11 @@ function normPct(v){
 }
 
 function computeMetrics(data, targetEtapas){
-  // targetEtapas: quando o usuário filtra por uma etapa específica (ex: SERR), a "conclusão"
-  // de cada peça passa a ser medida NAQUELA etapa, em vez da etapa final do fluxo. Sem filtro,
-  // usa FINAL_ETAPAS (comportamento padrão = fluxo completo).
-  const etapaFiltroUnico = (targetEtapas && targetEtapas.length === 1) ? targetEtapas[0] : null;
-  const etapasAlvo = etapaFiltroUnico ? targetEtapas : FINAL_ETAPAS;
+  // targetEtapas: quando o usuário filtra por uma ou mais etapas (ex: SERR, PINT MET), a
+  // "conclusão" de cada peça passa a ser medida NAQUELAS etapas, em vez da etapa final do
+  // fluxo. Sem filtro, usa FINAL_ETAPAS (comportamento padrão = fluxo completo).
+  const hasEtapaFiltro = !!(targetEtapas && targetEtapas.length);
+  const etapasAlvo = hasEtapaFiltro ? targetEtapas : FINAL_ETAPAS;
   const rows = data.map(r => ({
     cod: r['COD'], descr: r['DESCR'], qtde: Number(r['QTDE'])||0,
     etapa: (r['ETAPA']||'').toString().trim().toUpperCase(),
@@ -337,15 +351,15 @@ function computeMetrics(data, targetEtapas){
   // "Não iniciada": com uma etapa específica selecionada, olha só a linha daquela etapa. Sem
   // filtro (fluxo inteiro), só conta como não iniciado o item que não tem NENHUMA etapa com
   // progresso — senão um item com SERR pronto e PROD pendente virava "não iniciado" errado.
-  const gruposNaoIniciados = etapaFiltroUnico
+  const gruposNaoIniciados = hasEtapaFiltro
     ? itensNaEtapaAlvo.filter(x => x.row.status==='PENDENTE').map(x=>x.g)
     : itens.filter(g => g.every(r=>r.status==='PENDENTE'));
   const itensNaoIniciados = gruposNaoIniciados.length;
   const pecasNaoIniciadas = gruposNaoIniciados.reduce((a,g)=>a+g[0].qtde, 0);
 
-  // Quantidade REAL de peças: 1x por item (não por etapa/processo que ele passa). Com etapa
-  // filtrada, só conta itens cujo fluxo passa por ela; sem filtro, conta todos os itens.
-  const totalPecasReal = etapaFiltroUnico
+  // Quantidade REAL de peças: 1x por item (não por etapa/processo que ele passa). Com etapa(s)
+  // filtrada(s), só conta itens cujo fluxo passa por alguma delas; sem filtro, conta todos.
+  const totalPecasReal = hasEtapaFiltro
     ? itensNaEtapaAlvo.reduce((a,x)=>a+x.row.qtde, 0)
     : itens.reduce((a,g)=>a+g[0].qtde, 0);
   const pecasAndamento = Math.max(0, totalPecasReal - pecasFinalizadas - pecasNaoIniciadas);
@@ -401,7 +415,7 @@ function calcularTendenciaLinear_(historicoOrdenado){
   return {dia0, slope, intercept};
 }
 
-function renderProjecao(historico, etapaFiltro){
+function renderProjecao(historico, etapaFiltro, multiplasEtapas){
   const etapaAlvo = etapaFiltro || 'TOTAL';
   const real = historico.filter(h => h.etapa === etapaAlvo).sort((a,b)=> a.data.localeCompare(b.data));
   const tendencia = calcularTendenciaLinear_(real);
@@ -465,7 +479,9 @@ function renderProjecao(historico, etapaFiltro){
     }
   });
 
-  const rotuloEtapa = etapaAlvo === 'TOTAL' ? 'todas as etapas (total geral)' : 'etapa ' + etapaAlvo;
+  const rotuloEtapa = multiplasEtapas
+    ? 'total geral (não há série própria para várias etapas combinadas)'
+    : etapaAlvo === 'TOTAL' ? 'todas as etapas (total geral)' : 'etapa ' + etapaAlvo;
   const descEl = $('chartProjecao').closest('.panel').querySelector('.desc');
   if(descEl){
     const base = 'Mostrando: ' + rotuloEtapa + ' — segue o filtro de etapa acima; filtro de status e cliente não se aplicam aqui, pois % de conclusão já mistura os três status por definição. ';
@@ -532,29 +548,29 @@ function renderEtapaDonuts(m){
 function render(data){
   const clienteFilteredData = clienteFiltro ? data.filter(r => (r['CLIENTE']||'').toString().trim() === clienteFiltro) : data;
 
-  const etapaSel = $('fEtapa') ? $('fEtapa').value : '';
-  const statusSel = $('fStatus') ? $('fStatus').value : '';
+  const etapaSel = getChecked('msEtapaMenu');
+  const statusSel = getChecked('msStatusMenu');
 
   let filteredData = clienteFilteredData;
-  if(etapaSel) filteredData = filteredData.filter(r => (r['ETAPA']||'').toString().trim().toUpperCase() === etapaSel);
-  if(statusSel) filteredData = filteredData.filter(r => normStatus(r['STATUS']) === statusSel);
+  if(etapaSel.length) filteredData = filteredData.filter(r => etapaSel.includes((r['ETAPA']||'').toString().trim().toUpperCase()));
+  if(statusSel.length) filteredData = filteredData.filter(r => statusSel.includes(normStatus(r['STATUS'])));
 
   const m = computeMetrics(filteredData);
   // "Peças reais" precisam ver TODAS as etapas de cada item pra decidir onde ele está — por
   // isso usam clienteFilteredData (não filteredData, que já cortou as outras etapas). Quando
-  // uma etapa é escolhida no filtro, essa etapa vira o critério de "pronto" (etapasAlvo);
+  // uma ou mais etapas são escolhidas no filtro, elas viram o critério de "pronto" (etapasAlvo);
   // sem etapa selecionada, usa a etapa final do fluxo (padrão em computeMetrics).
-  const mReal = computeMetrics(clienteFilteredData, etapaSel ? [etapaSel] : null);
+  const mReal = computeMetrics(clienteFilteredData, etapaSel.length ? etapaSel : null);
 
-  const etapaLabel = etapaSel ? etapaSel : 'etapa final';
+  const etapaLabel = etapaSel.length ? etapaSel.join(', ') : 'etapa final';
   $('lPecasFinal').textContent = `peças finalizadas (${etapaLabel})`;
   $('lPecasAndamento').textContent = `peças em andamento (${etapaLabel})`;
   $('lPecasNaoIniciadas').textContent = `peças não iniciadas (${etapaLabel})`;
   $('lConclusao').textContent = `% concl. real (${etapaLabel})`;
   $('lItensCompletos').textContent = `itens prontos (${etapaLabel})`;
   $('lItensNaoIniciados').textContent = `itens não iniciados (${etapaLabel})`;
-  $('pecasRealDesc').textContent = etapaSel
-    ? `Quantidade de peças de fato (1x por item) cuja etapa "${etapaSel}" está FINALIZADO/ANDAMENTO/PENDENTE. Itens que não passam por essa etapa ficam de fora.`
+  $('pecasRealDesc').textContent = etapaSel.length
+    ? `Quantidade de peças de fato (1x por item) cuja etapa (${etapaSel.join(', ')}) está FINALIZADO/ANDAMENTO/PENDENTE. Itens que não passam por nenhuma dessas etapas ficam de fora.`
     : 'Quantidade de peças de fato (1x por item), não contagem de processos/etapas. Uma peça só é "finalizada" quando chega FINALIZADO na etapa final do seu fluxo.';
 
   $('lastRowsInfo').textContent = `${m.rows.length} registros de etapa · ${m.itensCount} itens · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
@@ -621,25 +637,38 @@ function render(data){
     }
   });
 
-  // filtro etapas dropdown
-  const fEtapa = $('fEtapa');
-  const cur = fEtapa.value;
-  fEtapa.innerHTML = '<option value="">Todas as etapas</option>' + mReal.etapasOrdered.map(e=>`<option value="${e}">${e}</option>`).join('');
-  fEtapa.value = cur;
+  // filtro etapas (dropdown multi-seleção) — repopula as opções preservando o que já estava marcado
+  const msEtapaMenu = $('msEtapaMenu');
+  msEtapaMenu.innerHTML = mReal.etapasOrdered.map(e=>`<label class="ms-opt"><input type="checkbox" value="${e}" ${etapaSel.includes(e)?'checked':''}> ${e}</label>`).join('');
+  setMsLabel('msEtapaBtn', etapaSel, 'Todas as etapas');
+  setMsLabel('msStatusBtn', statusSel, 'Todos os status');
 
   renderTable(m.rows);
-  renderProjecao(currentHistorico, etapaSel);
+  // A projeção histórica só existe por etapa individual (ou 'TOTAL' com nenhuma selecionada) —
+  // com várias etapas marcadas ao mesmo tempo não há série combinada, então cai pra TOTAL.
+  renderProjecao(currentHistorico, etapaSel.length === 1 ? etapaSel[0] : '', etapaSel.length > 1);
   window._metrics = m;
 }
 
+function getChecked(menuId){
+  return Array.from(document.querySelectorAll('#'+menuId+' input:checked')).map(el=>el.value);
+}
+
+function setMsLabel(btnId, values, allLabel){
+  const btn = $(btnId);
+  if(!values.length) btn.textContent = allLabel;
+  else if(values.length <= 2) btn.textContent = values.join(', ');
+  else btn.textContent = values.length + ' selecionadas';
+}
+
 function renderTable(rows){
-  const etapaF = $('fEtapa').value;
-  const statusF = $('fStatus').value;
+  const etapaF = getChecked('msEtapaMenu');
+  const statusF = getChecked('msStatusMenu');
   const buscaF = $('fBusca').value.trim().toLowerCase();
 
   let filtered = rows.filter(r=>{
-    if(etapaF && r.etapa !== etapaF) return false;
-    if(statusF && r.status !== statusF) return false;
+    if(etapaF.length && !etapaF.includes(r.etapa)) return false;
+    if(statusF.length && !statusF.includes(r.status)) return false;
     if(buscaF && !String(r.descr).toLowerCase().includes(buscaF)) return false;
     return true;
   });
@@ -658,9 +687,19 @@ function renderTable(rows){
   `).join('') || '<tr><td colspan="7" style="color:#8b93a1;">Nenhum resultado.</td></tr>';
 }
 
-['fEtapa','fStatus'].forEach(id=>{
-  $(id).addEventListener('input', ()=> render(currentData));
-});
+// dropdowns de multi-seleção: abre/fecha ao clicar no botão, fecha ao clicar fora, e reagem
+// a mudanças nos checkboxes (delegação de evento — o menu de etapas é recriado a cada render)
+function toggleMsMenu(menuId){
+  document.querySelectorAll('.ms-menu.open').forEach(m=>{ if(m.id!==menuId) m.classList.remove('open'); });
+  $(menuId).classList.toggle('open');
+}
+$('msEtapaBtn').addEventListener('click', (e)=>{ e.stopPropagation(); toggleMsMenu('msEtapaMenu'); });
+$('msStatusBtn').addEventListener('click', (e)=>{ e.stopPropagation(); toggleMsMenu('msStatusMenu'); });
+document.addEventListener('click', ()=> document.querySelectorAll('.ms-menu.open').forEach(m=>m.classList.remove('open')));
+$('msEtapaMenu').addEventListener('click', e=>e.stopPropagation());
+$('msStatusMenu').addEventListener('click', e=>e.stopPropagation());
+$('msEtapaMenu').addEventListener('change', ()=> render(currentData));
+$('msStatusMenu').addEventListener('change', ()=> render(currentData));
 $('fBusca').addEventListener('input', ()=> renderTable(window._metrics.rows));
 
 // ---- Config: Supabase ----
