@@ -329,7 +329,10 @@ function computeMetrics(data, targetEtapas){
     .filter(x => x.row);
 
   const itensCompletos = itensNaEtapaAlvo.filter(x => x.row.status==='FINALIZADO').length;
-  const pecasFinalizadas = itensNaEtapaAlvo.filter(x => x.row.status==='FINALIZADO').reduce((a,x)=>a+x.row.qtdeFin, 0);
+  // QTDE FIN já é a contagem real de peças prontas naquela linha (ex: lote de 8 com "FIN 6/8"
+  // na OBS) mesmo quando o STATUS do lote ainda está ANDAMENTO porque nem tudo terminou. Somar
+  // só quando status==='FINALIZADO' escondia essas peças parciais já finalizadas.
+  const pecasFinalizadas = itensNaEtapaAlvo.reduce((a,x)=>a+x.row.qtdeFin, 0);
 
   // "Não iniciada": com uma etapa específica selecionada, olha só a linha daquela etapa. Sem
   // filtro (fluxo inteiro), só conta como não iniciado o item que não tem NENHUMA etapa com
