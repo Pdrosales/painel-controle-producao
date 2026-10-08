@@ -280,7 +280,10 @@
     </div>
   </div>
 
-  <div class="panel" style="margin-bottom:16px;">
+  <!-- Oculto por enquanto: histórico diário ainda curto demais pra projeção ser confiável.
+       Reativar removendo este comentário + a linha "if(false)" em renderProjecao() (no <script>)
+       quando houver dias de sincronização suficientes pra tendência fazer sentido. -->
+  <div class="panel" style="margin-bottom:16px;" hidden>
     <h2>Projeção de conclusão</h2>
     <p class="desc">% de conclusão geral registrado a cada dia — um ponto por dia de sincronização.</p>
     <div class="chart-box" style="height:220px;"><canvas id="chartProjecao"></canvas></div>
@@ -509,6 +512,8 @@ function calcularTendenciaLinear_(historicoOrdenado){
 }
 
 function renderProjecao(historico, etapaFiltro, multiplasEtapas){
+  if(true) return; // painel oculto (ver comentário no HTML) — histórico ainda curto demais
+
   const etapaAlvo = etapaFiltro || 'TOTAL';
   const real = historico.filter(h => h.etapa === etapaAlvo).sort((a,b)=> a.data.localeCompare(b.data));
   const tendencia = calcularTendenciaLinear_(real);
