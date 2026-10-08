@@ -251,13 +251,13 @@
   </div>
 
   <div class="panel" style="margin-bottom:16px;">
-    <h2>Relação de peças prontas</h2>
-    <p class="desc" id="pecasProntasDesc">Detalhamento peça a peça do KPI "peças finalizadas" acima — inclui peças já 100% concluídas e as que já têm alguma quantidade pronta (QTDE FIN) mesmo com o lote ainda em ANDAMENTO.</p>
+    <h2>Relação de peças</h2>
+    <p class="desc" id="itensDetalheDesc">Detalhamento peça a peça, na etapa-alvo — use o filtro de Status acima (Pendente/Andamento/Finalizado) pra ver só o que te interessa: o que já fechou, o que está rolando agora, ou o que ainda nem começou.</p>
     <div class="tbl-scroll">
       <table>
-        <thead><tr><th>Código</th><th>Peça</th><th>Etapa</th><th>Status</th><th>Qtde Fin</th></tr></thead>
-        <tbody id="tblPecasProntas"></tbody>
-        <tfoot><tr class="total-row"><td colspan="4" style="text-align:right;">Total peças</td><td id="tdTotalPecasProntas"></td></tr></tfoot>
+        <thead><tr><th>Código</th><th>Peça</th><th>Etapa</th><th>Status</th><th>Qtde total</th><th>Pronta</th><th>Restante</th></tr></thead>
+        <tbody id="tblItensDetalhe"></tbody>
+        <tfoot><tr class="total-row"><td colspan="4" style="text-align:right;">Totais</td><td id="tdTotalQtde"></td><td id="tdTotalPronta"></td><td id="tdTotalRestante"></td></tr></tfoot>
       </table>
     </div>
   </div>
@@ -426,20 +426,6 @@ function computeMetrics(data, targetEtapas){
   // só quando status==='FINALIZADO' escondia essas peças parciais já finalizadas.
   const pecasFinalizadas = itensNaEtapaAlvo.reduce((a,x)=>a+x.row.qtdeFin, 0);
 
-  // Relação peça a peça do que compõe pecasFinalizadas acima (mesmo critério: QTDE FIN > 0 na
-  // etapa alvo, mesmo que o lote ainda esteja ANDAMENTO) — ordenado por código (numérico quando
-  // possível, "N/A" por último) para bater com a forma que o PCP já confere na planilha.
-  const itensProntos = itensNaEtapaAlvo
-    .filter(x => x.row.qtdeFin > 0)
-    .map(x => ({ cod: x.row.cod, descr: x.row.descr, etapa: x.row.etapa, status: x.row.status, qtdeFin: x.row.qtdeFin }))
-    .sort((a,b) => {
-      const an = parseInt(a.cod,10), bn = parseInt(b.cod,10);
-      if(!isNaN(an) && !isNaN(bn)) return an-bn;
-      if(!isNaN(an)) return -1;
-      if(!isNaN(bn)) return 1;
-      return String(a.cod).localeCompare(String(b.cod));
-    });
-
   // "Não iniciada": com uma etapa específica selecionada, olha só a linha daquela etapa. Sem
   // filtro (fluxo inteiro), só conta como não iniciado o item que não tem NENHUMA etapa com
   // progresso — senão um item com SERR pronto e PROD pendente virava "não iniciado" errado.
@@ -447,6 +433,28 @@ function computeMetrics(data, targetEtapas){
     ? itensNaEtapaAlvo.filter(x => x.row.status==='PENDENTE').map(x=>x.g)
     : itens.filter(g => g.every(r=>r.status==='PENDENTE'));
   const pecasNaoIniciadas = gruposNaoIniciados.reduce((a,g)=>a+g[0].qtde, 0);
+
+  // Relação peça a peça de TODOS os itens na etapa-alvo — a tabela do painel filtra isso pelo
+  // mesmo filtro de Status do topo (Pendente/Andamento/Finalizado). O "status" aqui usa a
+  // MESMA regra do KPI acima, não o status cru da linha: um item com a etapa-alvo PENDENTE
+  // mas que já tem progresso em etapa anterior (não está no conjunto gruposNaoIniciados) é
+  // recategorizado como ANDAMENTO, senão a tabela filtrada por "Andamento" não bateria com o
+  // KPI "peças em andamento" (que já considera esse caso como andamento, não não-iniciado).
+  const naoIniciadosSet = new Set(gruposNaoIniciados);
+  const itensDetalhe = itensNaEtapaAlvo
+    .map(x => {
+      let status = x.row.status;
+      if(status === 'PENDENTE' && !naoIniciadosSet.has(x.g)) status = 'ANDAMENTO';
+      return { cod: x.row.cod, descr: x.row.descr, etapa: x.row.etapa, status,
+        qtde: x.row.qtde, qtdeFin: x.row.qtdeFin, qtdeRestante: x.row.qtde - x.row.qtdeFin };
+    })
+    .sort((a,b) => {
+      const an = parseInt(a.cod,10), bn = parseInt(b.cod,10);
+      if(!isNaN(an) && !isNaN(bn)) return an-bn;
+      if(!isNaN(an)) return -1;
+      if(!isNaN(bn)) return 1;
+      return String(a.cod).localeCompare(String(b.cod));
+    });
 
   // Quantidade REAL de peças: 1x por item (não por etapa/processo que ele passa). Com etapa(s)
   // filtrada(s), só conta itens cujo fluxo passa por alguma delas; sem filtro, conta todos.
@@ -472,7 +480,7 @@ function computeMetrics(data, targetEtapas){
     };
   });
 
-  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, pecasFinalizadas, itensProntos,
+  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, pecasFinalizadas, itensDetalhe,
     totalPecasReal, pecasNaoIniciadas, pecasAndamento, conclusaoPecasReal,
     byEtapa, etapasOrdered};
 }
@@ -602,28 +610,41 @@ function renderClienteList(data){
   });
 }
 
-function renderPecasProntas(itensProntos, total){
-  $('tblPecasProntas').innerHTML = itensProntos.map(it=>`
-    <tr class="row-clicavel" data-cod="${it.cod||''}" data-descr="${String(it.descr).replace(/"/g,'&quot;')}" data-etapa="${it.etapa}" data-status="${it.status}" data-qtdefin="${it.qtdeFin}">
+function renderItensDetalhe(itensDetalhe, statusSel){
+  const filtrados = statusSel.length ? itensDetalhe.filter(it => statusSel.includes(it.status)) : itensDetalhe;
+
+  $('itensDetalheDesc').textContent = statusSel.length
+    ? `Mostrando: ${statusSel.join(', ')}. Use o filtro de Status acima pra trocar.`
+    : 'Mostrando todos os status — use o filtro de Status acima (Pendente/Andamento/Finalizado) pra ver só o que te interessa.';
+
+  $('tblItensDetalhe').innerHTML = filtrados.map(it=>`
+    <tr class="row-clicavel" data-cod="${it.cod||''}" data-descr="${String(it.descr).replace(/"/g,'&quot;')}" data-etapa="${it.etapa}" data-status="${it.status}" data-qtde="${it.qtde}" data-qtdefin="${it.qtdeFin}" data-restante="${it.qtdeRestante}">
       <td>${it.cod||'N/A'}</td>
       <td>${it.descr}</td>
       <td>${it.etapa}</td>
       <td><span class="badge ${it.status}">${it.status}</span></td>
+      <td>${it.qtde}</td>
       <td>${it.qtdeFin}</td>
-    </tr>`).join('') || '<tr><td colspan="5" style="color:#8b93a1;">Nenhuma peça pronta ainda.</td></tr>';
-  $('tdTotalPecasProntas').textContent = total;
+      <td>${it.qtdeRestante}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="color:#8b93a1;">Nenhum item nesse filtro.</td></tr>';
+
+  $('tdTotalQtde').textContent = filtrados.reduce((a,it)=>a+it.qtde, 0);
+  $('tdTotalPronta').textContent = filtrados.reduce((a,it)=>a+it.qtdeFin, 0);
+  $('tdTotalRestante').textContent = filtrados.reduce((a,it)=>a+it.qtdeRestante, 0);
 }
 
 function openPecaModal(row){
   const info = PECA_IMAGEM_MAP[row.dataset.cod];
   const descr = row.dataset.descr;
   $('pecaModalTitulo').textContent = descr;
-  $('pecaModalMeta').innerHTML = `
+  let meta = `
     <span>Código: <b>${row.dataset.cod||'N/A'}</b></span>
     <span>Etapa: <b>${row.dataset.etapa}</b></span>
-    <span>Status: <span class="badge ${row.dataset.status}">${row.dataset.status}</span></span>
-    <span>Qtde finalizada: <b>${row.dataset.qtdefin}</b></span>
-  `;
+    <span>Status: <span class="badge ${row.dataset.status}">${row.dataset.status}</span></span>`;
+  meta += row.dataset.qtde ? `<span>Qtde total: <b>${row.dataset.qtde}</b></span>` : '';
+  meta += `<span>Qtde finalizada: <b>${row.dataset.qtdefin}</b></span>`;
+  meta += row.dataset.restante ? `<span>Qtde restante: <b>${row.dataset.restante}</b></span>` : '';
+  $('pecaModalMeta').innerHTML = meta;
   const imgWrap = $('pecaModalImgWrap');
   if(info && info.imagem){
     imgWrap.innerHTML = `<img src="${info.imagem}" alt="${descr}">`;
@@ -637,7 +658,7 @@ function closePecaModal(){
   $('pecaModalOverlay').classList.remove('open');
 }
 
-$('tblPecasProntas').addEventListener('click', (e)=>{
+$('tblItensDetalhe').addEventListener('click', (e)=>{
   const row = e.target.closest('tr.row-clicavel');
   if(row) openPecaModal(row);
 });
@@ -727,7 +748,7 @@ function render(data){
   });
 
   renderClienteList(data);
-  renderPecasProntas(mReal.itensProntos, mReal.pecasFinalizadas);
+  renderItensDetalhe(mReal.itensDetalhe, statusSel);
   renderEtapaDonuts(m);
 
   // conclusao por etapa
