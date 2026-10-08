@@ -62,7 +62,6 @@
   .cfg-msg.err{color:var(--red);}
   .cfg-msg.ok{color:var(--green);}
 
-  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 20px 12px;}
   .panel h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 2px;}
   .panel .desc{color:var(--muted);font-size:12.5px;margin:0 0 14px;}
@@ -74,13 +73,38 @@
   .hero-stats .v.accent{color:var(--amber);}
   .hero-stats .l{color:var(--muted);font-size:10.5px;margin-top:3px;}
 
-  .cliente-list{max-height:246px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
-  .cliente-chip{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font-size:12.5px;cursor:pointer;}
-  .cliente-chip:hover{border-color:var(--amber);}
-  .cliente-chip.active{border-color:var(--amber);background:var(--amber-dim);color:var(--amber);}
-  .cliente-chip .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .cliente-chip .cnt{color:var(--muted);font-size:11px;flex-shrink:0;}
-  .cliente-chip.active .cnt{color:var(--amber);}
+  .kpi-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+  .kpi-tile{border-radius:12px;padding:16px 16px 14px;text-align:center;}
+  .kpi-tile-label{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:.03em;margin-bottom:8px;}
+  .kpi-tile-value{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;}
+  .kpi-tile.teal{background:var(--green);}
+  .kpi-tile.teal .kpi-tile-label{color:#0d1510cc;}
+  .kpi-tile.teal .kpi-tile-value{color:#0d1510;}
+  .kpi-tile.red{background:var(--red);}
+  .kpi-tile.red .kpi-tile-label{color:#1a0e0bcc;}
+  .kpi-tile.red .kpi-tile-value{color:#1a0e0b;}
+  .kpi-tile.black{background:#0a0b0d;border:1px solid var(--line);}
+  .kpi-tile.black .kpi-tile-label{color:var(--muted);}
+  .kpi-tile.black .kpi-tile-value{color:var(--text);}
+
+  .slicer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;}
+  .slicer-col-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .slicer-col-head h4{margin:0;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .slicer-clear{color:var(--amber);font-size:11px;cursor:pointer;}
+  .slicer-clear:hover{text-decoration:underline;}
+  .slicer-list{max-height:246px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+  .slicer-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);font-size:12.5px;cursor:pointer;}
+  .slicer-opt:hover{border-color:var(--amber);}
+  .slicer-opt.active, .slicer-opt:has(input:checked){border-color:var(--amber);background:var(--amber-dim);color:var(--amber);}
+  .slicer-opt .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .slicer-opt .cnt{color:var(--muted);font-size:11px;flex-shrink:0;}
+  .slicer-opt.active .cnt, .slicer-opt:has(input:checked) .cnt{color:var(--amber);}
+  .slicer-opt input{accent-color:var(--amber);}
+
+  @media(max-width:860px){
+    .kpi-strip{grid-template-columns:1fr;}
+    .slicer-grid{grid-template-columns:1fr;}
+  }
 
   .etapa-donut-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
   .etapa-card{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 12px;text-align:center;}
@@ -93,6 +117,21 @@
   th{text-align:left;color:var(--muted);font-weight:500;font-size:11.5px;text-transform:none;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);}
   td{padding:9px 10px;border-bottom:1px solid var(--line);}
   tr:last-child td{border-bottom:none;}
+  .total-row td{background:var(--green-dim);color:var(--green);font-weight:700;font-size:14px;}
+  tr.row-clicavel{cursor:pointer;}
+  tr.row-clicavel:hover td{background:var(--panel-2);}
+
+  .peca-modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,11,13,.72);z-index:100;align-items:center;justify-content:center;padding:20px;}
+  .peca-modal-overlay.open{display:flex;}
+  .peca-modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;position:relative;}
+  .peca-modal-close{position:absolute;top:14px;right:14px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;line-height:1;}
+  .peca-modal-close:hover{border-color:var(--amber);}
+  .peca-modal-img{margin-bottom:16px;border-radius:10px;overflow:hidden;background:var(--panel-2);display:flex;align-items:center;justify-content:center;min-height:160px;max-height:46vh;}
+  .peca-modal-img img{max-width:100%;max-height:46vh;object-fit:contain;display:block;}
+  .peca-sem-imagem{color:var(--muted);font-size:12.5px;padding:30px 20px;text-align:center;}
+  .peca-modal h3{font-family:'Space Grotesk',sans-serif;font-size:16px;margin:0 0 12px;}
+  .peca-modal-meta{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--muted);}
+  .peca-modal-meta b{color:var(--text);font-weight:600;}
   .tbl-scroll{max-height:360px;overflow-y:auto;}
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
   .badge.FINALIZADO{background:var(--green-dim);color:var(--green);}
@@ -102,20 +141,11 @@
   .filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
   .filters input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;}
 
-  .ms-filter{position:relative;}
-  .ms-btn{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:12.5px;font-family:inherit;cursor:pointer;min-width:140px;text-align:left;}
-  .ms-btn:hover{border-color:var(--amber);}
-  .ms-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px;min-width:180px;max-height:220px;overflow-y:auto;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.35);}
-  .ms-menu.open{display:block;}
-  .ms-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12.5px;border-radius:6px;cursor:pointer;white-space:nowrap;}
-  .ms-opt:hover{background:var(--panel);}
-  .ms-opt input{accent-color:var(--amber);}
 
   footer{color:var(--muted);font-size:12px;margin-top:30px;text-align:center;}
 
   @media(max-width:860px){
     .kpis{grid-template-columns:repeat(2,1fr);}
-    .grid2{grid-template-columns:1fr;}
     .cfg-grid{grid-template-columns:1fr;}
   }
 </style>
@@ -169,6 +199,44 @@
     <div class="cfg-msg" id="cfgMsg"></div>
   </div>
 
+  <div class="kpi-strip">
+    <div class="kpi-tile teal">
+      <div class="kpi-tile-label">PEÇAS PRONTAS</div>
+      <div class="kpi-tile-value" id="heroPecasProntas">–</div>
+    </div>
+    <div class="kpi-tile red">
+      <div class="kpi-tile-label">PEÇAS TOTAIS</div>
+      <div class="kpi-tile-value" id="heroPecasTotais">–</div>
+    </div>
+    <div class="kpi-tile black">
+      <div class="kpi-tile-label">% CONCLUSÃO</div>
+      <div class="kpi-tile-value" id="heroConclusao">–</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Filtros</h2>
+    <p class="desc" id="filtrosDesc">Clique para filtrar o painel inteiro por cliente, etapa e/ou status. Etapa e status aceitam múltipla seleção.</p>
+    <div class="slicer-grid">
+      <div class="slicer-col">
+        <div class="slicer-col-head"><h4>Cliente</h4></div>
+        <div class="slicer-list" id="clienteList"></div>
+      </div>
+      <div class="slicer-col">
+        <div class="slicer-col-head"><h4>Etapa</h4><span class="slicer-clear" id="clearEtapa">limpar</span></div>
+        <div class="slicer-list" id="msEtapaMenu"></div>
+      </div>
+      <div class="slicer-col">
+        <div class="slicer-col-head"><h4>Status</h4><span class="slicer-clear" id="clearStatus">limpar</span></div>
+        <div class="slicer-list" id="msStatusMenu">
+          <label class="slicer-opt"><input type="checkbox" value="PENDENTE"> Pendente</label>
+          <label class="slicer-opt"><input type="checkbox" value="ANDAMENTO"> Andamento</label>
+          <label class="slicer-opt"><input type="checkbox" value="FINALIZADO"> Finalizado</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="panel" style="margin-bottom:16px;">
     <h2>Peças — visão real</h2>
     <p class="desc" id="pecasRealDesc">Quantidade de peças de fato (1x por item), não contagem de processos/etapas. Uma peça só é "finalizada" quando chega FINALIZADO na etapa final do seu fluxo.</p>
@@ -182,21 +250,15 @@
     </div>
   </div>
 
-  <div class="grid2">
-    <div class="panel">
-      <h2>Produção total (por processo)</h2>
-      <p class="desc">Distribuição de todas as etapas registradas — cada peça conta 1x por processo (SERR, PINT MET, PROD…) que passa, não é quantidade de peças.</p>
-      <div class="chart-box" style="height:220px;"><canvas id="chartTotal"></canvas></div>
-      <div class="hero-stats">
-        <div><div class="v" id="kpiItens">–</div><div class="l">itens únicos</div></div>
-        <div><div class="v" id="kpiCompletos">–</div><div class="l" id="lItensCompletos">itens prontos (etapa final)</div></div>
-        <div><div class="v" id="kpiNaoIniciados">–</div><div class="l" id="lItensNaoIniciados">itens não iniciados</div></div>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>Cliente</h2>
-      <p class="desc">Clique para filtrar o painel inteiro por cliente/pacote.</p>
-      <div class="cliente-list" id="clienteList"></div>
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Relação de peças prontas</h2>
+    <p class="desc" id="pecasProntasDesc">Detalhamento peça a peça do KPI "peças finalizadas" acima — inclui peças já 100% concluídas e as que já têm alguma quantidade pronta (QTDE FIN) mesmo com o lote ainda em ANDAMENTO.</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Código</th><th>Peça</th><th>Etapa</th><th>Status</th><th>Qtde Fin</th></tr></thead>
+        <tbody id="tblPecasProntas"></tbody>
+        <tfoot><tr class="total-row"><td colspan="4" style="text-align:right;">Total peças</td><td id="tdTotalPecasProntas"></td></tr></tfoot>
+      </table>
     </div>
   </div>
 
@@ -208,8 +270,14 @@
 
   <div class="panel" style="margin-bottom:16px;">
     <h2>% de conclusão por etapa</h2>
-    <p class="desc">Etapas abaixo da linha pontilhada (50%) são os principais gargalos da produção agora.</p>
+    <p class="desc">Etapas abaixo da linha pontilhada (50%) são os principais gargalos da produção agora. A tabela abaixo mostra a quantidade real de peças por etapa — útil pra ver onde o trabalho está acontecendo mesmo quando "peças finalizadas" (etapa final) ainda está em 0: pode haver bastante progresso em etapas anteriores do fluxo.</p>
     <div class="chart-box" style="height:260px;"><canvas id="chartConclusao"></canvas></div>
+    <div class="tbl-scroll" style="margin-top:14px;">
+      <table>
+        <thead><tr><th>Etapa</th><th>Peças totais</th><th>Peças prontas nessa etapa</th><th>%</th></tr></thead>
+        <tbody id="tblEtapaQtde"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="panel" style="margin-bottom:16px;">
@@ -222,18 +290,6 @@
     <h2>Itens que precisam de atenção</h2>
     <p class="desc">Etapas com menor % de conclusão — ordenadas da mais crítica para a menos crítica.</p>
     <div class="filters">
-      <div class="ms-filter" id="msEtapaWrap">
-        <button type="button" class="ms-btn" id="msEtapaBtn">Todas as etapas</button>
-        <div class="ms-menu" id="msEtapaMenu"></div>
-      </div>
-      <div class="ms-filter" id="msStatusWrap">
-        <button type="button" class="ms-btn" id="msStatusBtn">Todos os status</button>
-        <div class="ms-menu" id="msStatusMenu">
-          <label class="ms-opt"><input type="checkbox" value="PENDENTE"> Pendente</label>
-          <label class="ms-opt"><input type="checkbox" value="ANDAMENTO"> Andamento</label>
-          <label class="ms-opt"><input type="checkbox" value="FINALIZADO"> Finalizado</label>
-        </div>
-      </div>
       <input type="text" id="fBusca" placeholder="Buscar item…">
     </div>
     <div class="tbl-scroll">
@@ -245,6 +301,15 @@
   </div>
 
   <footer>Painel de controle de produção · dados sincronizados automaticamente do Google Sheets via Supabase</footer>
+</div>
+
+<div id="pecaModalOverlay" class="peca-modal-overlay">
+  <div class="peca-modal">
+    <button type="button" class="peca-modal-close" id="pecaModalClose">✕</button>
+    <div class="peca-modal-img" id="pecaModalImgWrap"></div>
+    <h3 id="pecaModalTitulo"></h3>
+    <div class="peca-modal-meta" id="pecaModalMeta"></div>
+  </div>
 </div>
 
 <script>
@@ -279,6 +344,13 @@ let currentHistorico = [...DEMO_HISTORICO];
 let pollTimer = null;
 let charts = {};
 let clienteFiltro = '';
+// Mapa código de produção (COD numérico, ex: "13") -> imagem/nome do catálogo comercial.
+// Gerado a partir da coluna "Item ATA" da planilha mestre do CRM — é essa coluna, não o
+// "Código" com prefixo tipo ARV-013, que bate com o COD numérico da planilha de produção.
+// Embutido direto aqui (em vez de um fetch('pecas-imagens-map.json')) porque abrir o
+// index.html direto como file:// bloqueia fetch de arquivo local por CORS — um <img src>
+// funciona em file://, mas fetch/XHR de arquivo local não. Ver CLAUDE.md pra regenerar.
+const PECA_IMAGEM_MAP = {"1":{"codigo":"ARV-001","imagem":"pecas-imagens/ARV-001.jpg","nome":"Árvore Cônica Natalina Iluminada"},"10":{"codigo":"ARV-010","imagem":"pecas-imagens/ARV-010.jpg","nome":"Árvore Cônica - Fiesta Navidad"},"100":{"codigo":"PPS-009","imagem":"pecas-imagens/PPS-009.jpg","nome":"Ornamento para Poste Estrela Cadente com Fita"},"101":{"codigo":"EST-007","imagem":"pecas-imagens/EST-007.jpg","nome":"Ornamento Cenográfico Pingente com Estrela Radiante Simples"},"102":{"codigo":"EST-008","imagem":"pecas-imagens/EST-008.jpg","nome":"Ornamento Cenográfico Pingente com Estrela Radiante Dupla"},"103":{"codigo":"EST-009","imagem":"pecas-imagens/EST-009.jpg","nome":"Ornamento Estrela Dupla Radiante"},"104":{"codigo":"EST-010","imagem":"pecas-imagens/EST-010.jpg","nome":"Ornamento Estrela Cruzada em X"},"105":{"codigo":"EST-011","imagem":"pecas-imagens/EST-011.jpg","nome":"Ornamento Cenográfico Pingente com Estrela Radiante Grande"},"106":{"codigo":"EST-012","imagem":"pecas-imagens/EST-012.jpg","nome":"Estrela Cadente Cenográfica Iluminada"},"107":{"codigo":"PPS-010","imagem":"pecas-imagens/PPS-010.jpg","nome":"Luminária Natalina para Poste Floco de Neve Iluminado B"},"108":{"codigo":"EST-013","imagem":"pecas-imagens/EST-013.jpg","nome":"Estrela Cadente Cenográfica Iluminada Seis Pontas"},"109":{"codigo":"EST-014","imagem":"pecas-imagens/EST-014.jpg","nome":"Estrela Cadente Cenográfica Iluminada Oito Pontas"},"11":{"codigo":"ARV-011","imagem":"pecas-imagens/ARV-011.jpg","nome":"Árvore Natalina Monumental Cenográfica com Vila Encantada Iluminada"},"110":{"codigo":"ANI-001","imagem":"pecas-imagens/ANI-001.jpg","nome":"Urso Natalino Iluminado com Cachecol Modelo Sentado"},"111":{"codigo":"CEN-001","imagem":"pecas-imagens/CEN-001.jpg","nome":"Escultura Cenográfica Trenó Real com Rena Interativa"},"112":{"codigo":"PER-001","imagem":"pecas-imagens/PER-001.jpg","nome":"Escultura Cenográfica Mamãe Noel"},"113":{"codigo":"PER-002","imagem":"pecas-imagens/PER-002.jpg","nome":"Escultura Cenográfica Papai Noel com Saco de Presentes"},"114":{"codigo":"INS-001","imagem":"pecas-imagens/INS-001.jpg","nome":"Poltrona Cenográfica do Papai Noel"},"115":{"codigo":"CEN-002","imagem":"pecas-imagens/CEN-002.jpg","nome":"Cenário Cenográfico Ursos Pescadores no Gelo (v1)"},"116":{"codigo":"POR-022","imagem":"pecas-imagens/POR-022.jpg","nome":"Portal Boneco de Neve Gigante com Cartola Interativo"},"117":{"codigo":"CEN-003","imagem":"pecas-imagens/CEN-003.jpg","nome":"Cenário Cenográfico Iceberg Flutuante com Pinguim"},"118":{"codigo":"ANI-002","imagem":"pecas-imagens/ANI-002.jpg","nome":"Pinguim Jogando Bola de Neve"},"119":{"codigo":"CEN-004","imagem":"pecas-imagens/CEN-004.jpg","nome":"Cenário Cenográfico Iceberg Flutuante com Pinguim Jogando"},"12":{"codigo":"ARV-012","imagem":"pecas-imagens/ARV-012.jpg","nome":"Árvore Natalina Cenográfica 3D Robotizada com Adornos"},"120":{"codigo":"PER-003","imagem":"pecas-imagens/PER-003.jpg","nome":"Escultura Cenográfica Soldadinho de Chumbo"},"121":{"codigo":"CEN-005","imagem":"pecas-imagens/CEN-005.jpg","nome":"Casinha Natalina Cenográfica Modelo 1"},"122":{"codigo":"CEN-006","imagem":"pecas-imagens/CEN-006.jpg","nome":"Casinha Natalina Cenográfica com Tenda e Sacada Modelo 2"},"123":{"codigo":"CEN-007","imagem":"pecas-imagens/CEN-007.jpg","nome":"Casinha Natalina Cenográfica Modelo 3"},"124":{"codigo":"CEN-008","imagem":"pecas-imagens/CEN-008.jpg","nome":"Casinha Natalina Cenográfica com Tenda e Sacada Modelo 1"},"125":{"codigo":"CEN-009","imagem":"pecas-imagens/CEN-009.jpg","nome":"Casinha Natalina Cenográfica Modelo Clássico"},"126":{"codigo":"CEN-010","imagem":"pecas-imagens/CEN-010.jpg","nome":"Cenário Cenográfico Duende Decorador e Rena de Natal"},"127":{"codigo":"PER-004","imagem":"pecas-imagens/PER-004.jpg","nome":"Escultura Cenográfica Anjo Músico Monumental Clássico"},"128":{"codigo":"PER-005","imagem":"pecas-imagens/PER-005.jpg","nome":"Escultura Cenográfica Anjo Músico Monumental"},"129":{"codigo":"POR-023","imagem":"pecas-imagens/POR-023.jpg","nome":"Portal Cenográfico Interativo Entrada do Mundo Gelado"},"13":{"codigo":"ARV-013","imagem":"pecas-imagens/ARV-013.jpg","nome":"Árvore Natalina Cônica Espiral Iluminada"},"130":{"codigo":"PER-006","imagem":"pecas-imagens/PER-006.jpg","nome":"Boneco de Neve Iluminado"},"131":{"codigo":"CEN-011","imagem":"pecas-imagens/CEN-011.jpg","nome":"Nicho Cenográfico Doces do Papai Noel"},"132":{"codigo":"ANI-003","imagem":"pecas-imagens/ANI-003.jpg","nome":"Rena de Marshmallow"},"133":{"codigo":"PER-007","imagem":"pecas-imagens/PER-007.jpg","nome":"Duende Comendo Doce"},"134":{"codigo":"ARV-020","imagem":"pecas-imagens/ARV-020.jpg","nome":"Árvore de Algodão Doce"},"135":{"codigo":"DOC-001","imagem":"pecas-imagens/DOC-001.jpg","nome":"Bolinha de Doce Luminosa"},"136":{"codigo":"BEN-001","imagem":"pecas-imagens/BEN-001.jpg","nome":"Doce Luminoso Bengala Natalina"},"137":{"codigo":"CEN-012","imagem":"pecas-imagens/CEN-012.jpg","nome":"Casa de Doces Cenográfica Gingerbread House"},"138":{"codigo":"FLO-001","imagem":"pecas-imagens/FLO-001.jpg","nome":"Flor Cenográfica Iluminada A"},"139":{"codigo":"FLO-002","imagem":"pecas-imagens/FLO-002.jpg","nome":"Flor Cenográfica Iluminada B"},"14":{"codigo":"ARV-014","imagem":"pecas-imagens/ARV-014.jpg","nome":"Árvore Natalina Cenográfica com Presentes Decorativos"},"140":{"codigo":"FLO-003","imagem":"pecas-imagens/FLO-003.jpg","nome":"Orquídea Cenográfica Iluminada"},"141":{"codigo":"CEN-013","imagem":"pecas-imagens/CEN-013.jpg","nome":"Nicho de Flores e Caracol Bola de Natal"},"142":{"codigo":"CEN-014","imagem":"pecas-imagens/CEN-014.jpg","nome":"Casinha de Cogumelo Cenográfica com Presentes"},"143":{"codigo":"CEN-015","imagem":"pecas-imagens/CEN-015.jpg","nome":"Casinha de Cogumelo Cenográfica Alta com Presentes"},"144":{"codigo":"ANI-004","imagem":"pecas-imagens/ANI-004.jpg","nome":"Coruja Iluminada sobre Tronco"},"145":{"codigo":"FLO-004","imagem":"pecas-imagens/FLO-004.jpg","nome":"Flores Abajur Iluminadas"},"146":{"codigo":"CEN-016","imagem":"pecas-imagens/CEN-016.jpg","nome":"Cenário Cenográfico Presépio Tradicional Monumental"},"147":{"codigo":"PER-008","imagem":"pecas-imagens/PER-008.jpg","nome":"Menino Jesus Presépio Minimalista"},"148":{"codigo":"PER-009","imagem":"pecas-imagens/PER-009.jpg","nome":"São José Presépio Minimalista"},"149":{"codigo":"PER-010","imagem":"pecas-imagens/PER-010.jpg","nome":"Rei Mago Gaspar Presépio Minimalista"},"15":{"codigo":"PPS-001","imagem":"pecas-imagens/PPS-001.jpg","nome":"Árvore de Poste Cônica Luminosa 12m"},"150":{"codigo":"PER-011","imagem":"pecas-imagens/PER-011.jpg","nome":"Rei Mago Belchior Presépio Minimalista"},"151":{"codigo":"PER-012","imagem":"pecas-imagens/PER-012.jpg","nome":"Rei Mago Baltazar Presépio Minimalista"},"152":{"codigo":"PER-013","imagem":"pecas-imagens/PER-013.jpg","nome":"Nossa Senhora Presépio Minimalista"},"153":{"codigo":"EST-015","imagem":"pecas-imagens/EST-015.jpg","nome":"Estrela do Oriente Presépio Minimalista"},"154":{"codigo":"ARV-021","imagem":"pecas-imagens/ARV-021.jpg","nome":"Árvore de Doces"},"155":{"codigo":"COM-002","imagem":"pecas-imagens/COM-002.jpg","nome":"Pilha de Tambores Natalinos"},"156":{"codigo":"CEN-017","imagem":"pecas-imagens/CEN-017.jpg","nome":"Presépio Cenográfico Monumental Sagrada Família Completa"},"157":{"codigo":"CEN-018","imagem":"pecas-imagens/CEN-018.jpg","nome":"Nicho de Ursos de Goma"},"158":{"codigo":"DOC-002","imagem":"pecas-imagens/DOC-002.jpg","nome":"Doce Luminoso A"},"159":{"codigo":"DOC-003","imagem":"pecas-imagens/DOC-003.jpg","nome":"Doce Luminoso B"},"16":{"codigo":"PPS-002","imagem":"pecas-imagens/PPS-002.jpg","nome":"Árvore de Poste Cônica Luminosa 9m"},"160":{"codigo":"BAL-001","imagem":"pecas-imagens/BAL-001.jpg","nome":"Balão Mágico Iluminado"},"161":{"codigo":"CEN-019","imagem":"pecas-imagens/CEN-019.jpg","nome":"Conjunto de Cogumelos Cenográficos"},"162":{"codigo":"PER-014","imagem":"pecas-imagens/PER-014.jpg","nome":"Palhacinho de Natal com Presentes Jack-in-the-Box"},"163":{"codigo":"CEN-020","imagem":"pecas-imagens/CEN-020.jpg","nome":"Nicho de Brinquedos Castelinho de Blocos"},"164":{"codigo":"CEN-021","imagem":"pecas-imagens/CEN-021.jpg","nome":"Cenário Cenográfico Ursos Pescadores no Gelo (v2)"},"165":{"codigo":"ANI-005","imagem":"pecas-imagens/ANI-005.jpg","nome":"Urso Filhote Dorminhoco"},"166":{"codigo":"ANI-006","imagem":"pecas-imagens/ANI-006.jpg","nome":"Urso Pescador Rindo"},"167":{"codigo":"CEN-022","imagem":"pecas-imagens/CEN-022.jpg","nome":"Cenário Cenográfico Nicho dos Pinguins"},"168":{"codigo":"ANI-007","imagem":"pecas-imagens/ANI-007.jpg","nome":"Pinguim Patinador"},"169":{"codigo":"ANI-008","imagem":"pecas-imagens/ANI-008.jpg","nome":"Pinguim com Protetor Auricular"},"17":{"codigo":"ARV-015","imagem":"pecas-imagens/ARV-015.jpg","nome":"Árvore de Natal com Bonecos de Neve na Base"},"170":{"codigo":"ANI-009","imagem":"pecas-imagens/ANI-009.jpg","nome":"Pinguim Jogador de Hóquei"},"171":{"codigo":"ANI-010","imagem":"pecas-imagens/ANI-010.jpg","nome":"Pinguim Jogador de Hóquei em Movimento"},"172":{"codigo":"ANI-011","imagem":"pecas-imagens/ANI-011.jpg","nome":"Pinguim Esquiador"},"173":{"codigo":"ANI-012","imagem":"pecas-imagens/ANI-012.jpg","nome":"Pinguim Snowboarder"},"174":{"codigo":"ARV-022","imagem":"pecas-imagens/ARV-022.jpg","nome":"Árvore Branca de Bolas Vermelhas"},"175":{"codigo":"CEN-023","imagem":"pecas-imagens/CEN-023.jpg","nome":"Cenário Cenográfico Nicho dos Bonecos de Neve"},"176":{"codigo":"PER-015","imagem":"pecas-imagens/PER-015.jpg","nome":"Boneco de Neve com Gorro de Inverno"},"177":{"codigo":"PER-016","imagem":"pecas-imagens/PER-016.jpg","nome":"Boneco de Neve com Protetor Auricular"},"178":{"codigo":"PER-017","imagem":"pecas-imagens/PER-017.jpg","nome":"Boneco de Neve com Gorro e Cachecol Azul"},"179":{"codigo":"PER-018","imagem":"pecas-imagens/PER-018.jpg","nome":"Boneco de Neve com Gorro Natalino"},"18":{"codigo":"ARV-016","imagem":"pecas-imagens/ARV-016.jpg","nome":"Árvore de Natal Curvada Iluminada com Festão e Fitas"},"180":{"codigo":"POR-024","imagem":"pecas-imagens/POR-024.jpg","nome":"Cupcake Mágico Portal de Passagem"},"181":{"codigo":"DOC-004","imagem":"pecas-imagens/DOC-004.jpg","nome":"Pilha de Doces Decorativa"},"182":{"codigo":"DOC-005","imagem":"pecas-imagens/DOC-005.jpg","nome":"Pirulito Decorativo"},"183":{"codigo":"LET-001","imagem":"pecas-imagens/LET-001.jpg","nome":"Letreiro Luminoso Boas Festas"},"184":{"codigo":"LET-002","imagem":"pecas-imagens/LET-002.jpg","nome":"Letreiro Numérico 2027"},"185":{"codigo":"PER-019","imagem":"pecas-imagens/PER-019.jpg","nome":"Papai Noel com Saco de Presentes"},"186":{"codigo":"PER-020","imagem":"pecas-imagens/PER-020.jpg","nome":"Papai Noel Acenando"},"187":{"codigo":"BAL-002","imagem":"pecas-imagens/BAL-002.jpg","nome":"Balão de Luzes"},"188":{"codigo":"BAL-003","imagem":"pecas-imagens/BAL-003.jpg","nome":"Balão de Luzes com Presentes Suspensos"},"189":{"codigo":"COM-003","imagem":"pecas-imagens/COM-003.jpg","nome":"Espiral Cônica Luminosa"},"19":{"codigo":"ARV-017","imagem":"pecas-imagens/ARV-017.jpg","nome":"Árvore de Borboletas"},"190":{"codigo":"CEN-024","imagem":"pecas-imagens/CEN-024.jpg","nome":"Trem Mágico de Natal"},"191":{"codigo":"PER-021","imagem":"pecas-imagens/PER-021.jpg","nome":"Soldado Quebra-Nozes Cenográfico Iluminado"},"192":{"codigo":"PER-022","imagem":"pecas-imagens/PER-022.jpg","nome":"Boneco de Neve Cenográfico Iluminado Mod1"},"193":{"codigo":"PER-023","imagem":"pecas-imagens/PER-023.jpg","nome":"Boneco de Neve Cenográfico Iluminado Mod2"},"194":{"codigo":"ANI-013","imagem":"pecas-imagens/ANI-013.jpg","nome":"Pinguim Cenográfico Iluminado Mod1"},"195":{"codigo":"ANI-014","imagem":"pecas-imagens/ANI-014.jpg","nome":"Pinguim Cenográfico Iluminado Mod2"},"196":{"codigo":"ANI-015","imagem":"pecas-imagens/ANI-015.jpg","nome":"Pinguim Cenográfico Iluminado Mod3 Protetor Auricular"},"197":{"codigo":"DOC-006","imagem":"pecas-imagens/DOC-006.jpg","nome":"Boneco de Gengibre Cenográfico Iluminado"},"198":{"codigo":"PPS-011","imagem":"pecas-imagens/PPS-011.jpg","nome":"Face de Papai Noel para Poste"},"199":{"codigo":"PPS-012","imagem":"pecas-imagens/PPS-012.jpg","nome":"Ornamento Ho Ho Ho com Papai Noel para Poste"},"2":{"codigo":"ARV-002","imagem":"pecas-imagens/ARV-002.jpg","nome":"Árvore de Natal Cônica com Passagem"},"20":{"codigo":"ARV-018","imagem":"pecas-imagens/ARV-018.jpg","nome":"Árvore de Natal Cenográfica Decorada"},"200":{"codigo":"PPS-013","imagem":"pecas-imagens/PPS-013.jpg","nome":"Sino Natalino para Poste"},"201":{"codigo":"PPS-014","imagem":"pecas-imagens/PPS-014.jpg","nome":"Lua e Árvore Iluminada para Poste"},"202":{"codigo":"PPS-015","imagem":"pecas-imagens/PPS-015.jpg","nome":"Laço e Folhas Iluminadas para Poste"},"203":{"codigo":"PPS-016","imagem":"pecas-imagens/PPS-016.jpg","nome":"Ornamento Circular Geométrico para Poste Mod1"},"204":{"codigo":"PPS-017","imagem":"pecas-imagens/PPS-017.jpg","nome":"Ornamento Circular Orgânico para Poste"},"205":{"codigo":"PPS-018","imagem":"pecas-imagens/PPS-018.jpg","nome":"Ornamento Circular Decorativo para Poste"},"206":{"codigo":"PPS-019","imagem":"pecas-imagens/PPS-019.jpg","nome":"Ornamento Circular Geométrico para Poste Mod2"},"207":{"codigo":"PPS-020","imagem":"pecas-imagens/PPS-020.jpg","nome":"Presente com Face de Papai Noel para Poste"},"208":{"codigo":"PPS-021","imagem":"pecas-imagens/PPS-021.jpg","nome":"Presente com Rena para Poste"},"209":{"codigo":"PPS-022","imagem":"pecas-imagens/PPS-022.jpg","nome":"Anjo com Trombeta Iluminado para Poste"},"21":{"codigo":"ARV-019","imagem":"pecas-imagens/ARV-019.jpg","nome":"Árvore Festonada com Laço Comemorativo"},"210":{"codigo":"INS-002","imagem":"pecas-imagens/INS-002.jpg","nome":"Portal Instagramável Boneco de Neve Iluminado Mod1"},"211":{"codigo":"INS-003","imagem":"pecas-imagens/INS-003.jpg","nome":"Portal Instagramável Duende Natalino Iluminado"},"212":{"codigo":"INS-004","imagem":"pecas-imagens/INS-004.jpg","nome":"Portal Instagramável Boneco de Neve Iluminado Mod2"},"213":{"codigo":"INS-005","imagem":"pecas-imagens/INS-005.jpg","nome":"Portal Instagramável Rena Natalina Iluminada"},"214":{"codigo":"INS-006","imagem":"pecas-imagens/INS-006.jpg","nome":"Portal Instagramável Presépio Natalino Iluminado"},"215":{"codigo":"INS-007","imagem":"pecas-imagens/INS-007.jpg","nome":"Portal Instagramável Sagrada Família Iluminada"},"216":{"codigo":"BON-001","imagem":"pecas-imagens/BON-001.jpg","nome":"Papai Noel Cenográfico Iluminado"},"217":{"codigo":"DOC-007","imagem":"pecas-imagens/DOC-007.jpg","nome":"Bonecos de Gengibre Cenográficos Iluminados Conjunto"},"218":{"codigo":"DOC-008","imagem":"pecas-imagens/DOC-008.jpg","nome":"Pirulito Natalino Cenográfico Iluminado Laço Inferior"},"219":{"codigo":"DOC-009","imagem":"pecas-imagens/DOC-009.jpg","nome":"Pirulito Natalino Cenográfico Iluminado Espiral"},"22":{"codigo":"CAI-001","imagem":"pecas-imagens/CAI-001.jpg","nome":"Caixa de Presente Iluminada Inclinada 1,00m"},"220":{"codigo":"ANI-016","imagem":"pecas-imagens/ANI-016.jpg","nome":"Urso Natalino Cenográfico Iluminado"},"221":{"codigo":"BON-002","imagem":"pecas-imagens/BON-002.jpg","nome":"Painel Decorativo Papai Noel com Presente"},"222":{"codigo":"PER-024","imagem":"pecas-imagens/PER-024.jpg","nome":"Robô dos Presentes"},"223":{"codigo":"ATR-002","imagem":"pecas-imagens/ATR-002.jpg","nome":"Roda Gigante de Brinquedos"},"224":{"codigo":"CEN-025","imagem":"pecas-imagens/CEN-025.jpg","nome":"Fábrica de Brinquedos Casa Esfera e Casa Caixa com Esteira Animada"},"225":{"codigo":"ARV-023","imagem":"pecas-imagens/ARV-023.jpg","nome":"Árvore dos Duendes de Natal Oficina em Torno da Árvore"},"226":{"codigo":"CEN-026","imagem":"pecas-imagens/CEN-026.jpg","nome":"Fábrica de Brinquedos do Papai Noel Oficina Animada"},"227":{"codigo":"ARV-024","imagem":"pecas-imagens/ARV-024.jpg","nome":"Árvore do Trem Mágico"},"228":{"codigo":"CAR-001","imagem":"pecas-imagens/CAR-001.jpg","nome":"Carro Alegórico Trenó Mágico do Papai Noel"},"229":{"codigo":"CAR-002","imagem":"pecas-imagens/CAR-002.jpg","nome":"Carro Alegórico Fábrica de Doces Encantados"},"23":{"codigo":"CAI-002","imagem":"pecas-imagens/CAI-002.jpg","nome":"Caixa de Presente Iluminada Inclinada 1,50m"},"230":{"codigo":"ATR-003","imagem":"pecas-imagens/ATR-003.jpg","nome":"Triciclo Carrossel das Renas"},"231":{"codigo":"CAR-003","imagem":"pecas-imagens/CAR-003.jpg","nome":"Carro Alegórico Circo Mágico de Natal"},"232":{"codigo":"ATR-004","imagem":"pecas-imagens/ATR-004.jpg","nome":"Roda Espanhola Circense"},"233":{"codigo":"CAR-004","imagem":"pecas-imagens/CAR-004.jpg","nome":"Carro Alegórico Floresta Encantada"},"234":{"codigo":"CAR-005","imagem":"pecas-imagens/CAR-005.jpg","nome":"Carro Alegórico Mundo Gelado"},"235":{"codigo":"CAR-006","imagem":"pecas-imagens/CAR-006.jpg","nome":"Carro Alegórico Fábrica de Brinquedos Encantada"},"236":{"codigo":"ANI-017","imagem":"pecas-imagens/ANI-017.jpg","nome":"Rena Empinada em Estrutura de Fio Luminoso"},"237":{"codigo":"PER-025","imagem":"pecas-imagens/PER-025.jpg","nome":"Boneco de Chumbo Soldadinho Nutcracker"},"238":{"codigo":"ANI-018","imagem":"pecas-imagens/ANI-018.jpg","nome":"Rena com Cachecol Natalina"},"239":{"codigo":"BON-003","imagem":"pecas-imagens/BON-003.jpg","nome":"Mamãe Noel com Presente"},"24":{"codigo":"CAI-003","imagem":"pecas-imagens/CAI-003.jpg","nome":"Caixa de Presente Natalina Iluminada com fitas 1,00m"},"240":{"codigo":"PPS-023","imagem":"pecas-imagens/PPS-023.jpg","nome":"Ornamento para Poste Laço Natalino Tradicional"},"241":{"codigo":"ANI-019","imagem":"pecas-imagens/ANI-019.jpg","nome":"Conjunto Rena Empinada"},"242":{"codigo":"BON-004","imagem":"pecas-imagens/BON-004.jpg","nome":"Papai Noel sobre Caixa de Presentes"},"243":{"codigo":"DOC-010","imagem":"pecas-imagens/DOC-010.jpg","nome":"Biscoito Natalino Gingerbread Man com Gorro"},"244":{"codigo":"BON-005","imagem":"pecas-imagens/BON-005.jpg","nome":"Mamãe Noel com as Mãos na Cintura"},"245":{"codigo":"BON-006","imagem":"pecas-imagens/BON-006.jpg","nome":"Mamãe Noel Curvada Oferecendo Presente"},"246":{"codigo":"BON-007","imagem":"pecas-imagens/BON-007.jpg","nome":"Papai Noel Carregando Presentes"},"247":{"codigo":"ARC-005","imagem":"pecas-imagens/ARC-005.jpg","nome":"Arco de Estrelas"},"248":{"codigo":"COM-004","imagem":"pecas-imagens/COM-004.jpg","nome":"Laço Natalino Iluminado"},"249":{"codigo":"CAI-013","imagem":"pecas-imagens/CAI-013.jpg","nome":"Presente Suspenso Iluminado"},"25":{"codigo":"CAI-004","imagem":"pecas-imagens/CAI-004.jpg","nome":"Caixa de Presente Natalina Iluminada com fitas 1,50m"},"250":{"codigo":"BON-008","imagem":"pecas-imagens/BON-008.jpg","nome":"Papai Noel no Trenó com Rena Iluminado"},"26":{"codigo":"CAI-005","imagem":"pecas-imagens/CAI-005.jpg","nome":"Caixa de Presente Natalina Iluminada com fitas 2,00m"},"27":{"codigo":"POR-001","imagem":"pecas-imagens/POR-001.jpg","nome":"Portal Caixa de Presente Gigante Dourada"},"28":{"codigo":"CAI-006","imagem":"pecas-imagens/CAI-006.jpg","nome":"Caixa Natalina Iluminada 1,00m"},"29":{"codigo":"CAI-007","imagem":"pecas-imagens/CAI-007.jpg","nome":"Caixa de Presente Natalina Iluminada 1,50m"},"3":{"codigo":"ARV-003","imagem":"pecas-imagens/ARV-003.jpg","nome":"Árvore de Presentes"},"30":{"codigo":"CAI-008","imagem":"pecas-imagens/CAI-008.jpg","nome":"Caixa de Presente Natalina Iluminada 2,00m"},"31":{"codigo":"CAI-009","imagem":"pecas-imagens/CAI-009.jpg","nome":"Caixa de Presente Natalina Iluminada baixo relevo 1,00m"},"32":{"codigo":"CAI-010","imagem":"pecas-imagens/CAI-010.jpg","nome":"Caixa de Presente Natalina Iluminada baixo relevo 2,0m"},"33":{"codigo":"CAI-011","imagem":"pecas-imagens/CAI-011.jpg","nome":"Caixa de Presente Natalina Inclinada Iluminada"},"34":{"codigo":"POR-002","imagem":"pecas-imagens/POR-002.jpg","nome":"Portal Caixa de Presente Gigante Interativo 3,00m"},"35":{"codigo":"POR-003","imagem":"pecas-imagens/POR-003.jpg","nome":"Portal Caixa de Presente Gigante Interativo 3,50m"},"36":{"codigo":"CAI-012","imagem":"pecas-imagens/CAI-012.jpg","nome":"Torre de Presentes Empilhados Cenográfica"},"37":{"codigo":"PPS-003","imagem":"pecas-imagens/PPS-003.jpg","nome":"Presente Isométrico Poste"},"38":{"codigo":"PPS-004","imagem":"pecas-imagens/PPS-004.jpg","nome":"Presente Grandes Laços com Fita Poste"},"39":{"codigo":"PPS-005","imagem":"pecas-imagens/PPS-005.jpg","nome":"Presente Grandes Laços Poste"},"4":{"codigo":"ARV-004","imagem":"pecas-imagens/ARV-004.jpg","nome":"Árvore Cônica Natalina Iluminada com Festão e Estrela"},"40":{"codigo":"POR-004","imagem":"pecas-imagens/POR-004.jpg","nome":"Portal Arco Circular com Flocos de Neve"},"41":{"codigo":"POR-005","imagem":"pecas-imagens/POR-005.jpg","nome":"Portal Caixa de Presente Iluminado"},"42":{"codigo":"POR-006","imagem":"pecas-imagens/POR-006.jpg","nome":"Portal Arco Natalino com Laço Verde Iluminado"},"43":{"codigo":"POR-007","imagem":"pecas-imagens/POR-007.jpg","nome":"Portal Arco Natalino Ondulado Iluminado"},"44":{"codigo":"POR-008","imagem":"pecas-imagens/POR-008.jpg","nome":"Portal Arco Caixa de Presente Natalino com Laço Iluminado"},"45":{"codigo":"EST-001","imagem":"pecas-imagens/EST-001.jpg","nome":"Estrela Natalina Cenográfica Iluminada"},"46":{"codigo":"POR-009","imagem":"pecas-imagens/POR-009.jpg","nome":"Portal Arco Bola de Natal Concêntrico Iluminado"},"47":{"codigo":"EST-002","imagem":"pecas-imagens/EST-002.jpg","nome":"Estrela de Sete Pontas Tridimensional Iluminada"},"48":{"codigo":"POR-010","imagem":"pecas-imagens/POR-010.jpg","nome":"Portal Natalino Cenográfico Iluminado com Flocos de Neve"},"49":{"codigo":"POR-011","imagem":"pecas-imagens/POR-011.jpg","nome":"Portal Arco Natalino com Bolas e Festão Vermelho em Espiral Iluminado"},"5":{"codigo":"ARV-005","imagem":"pecas-imagens/ARV-005.jpg","nome":"Árvore Cônica Natalina Iluminada com Portal e Estrelas"},"50":{"codigo":"ARC-001","imagem":"pecas-imagens/ARC-001.jpg","nome":"Arco Cometa Iluminado"},"51":{"codigo":"POR-012","imagem":"pecas-imagens/POR-012.jpg","nome":"Portal Natalino Cenográfico em Formato de Floco de Neve"},"52":{"codigo":"POR-013","imagem":"pecas-imagens/POR-013.jpg","nome":"Portal Cenográfico Arco Cometa Radiante"},"53":{"codigo":"TUN-001","imagem":"pecas-imagens/TUN-001.jpg","nome":"Túnel de Passagem Natalino com Cascata Iluminada"},"54":{"codigo":"POR-014","imagem":"pecas-imagens/POR-014.jpg","nome":"Portal Arco de Passagem Natalino com Fita e Estrelas Iluminado"},"55":{"codigo":"ARC-002","imagem":"pecas-imagens/ARC-002.jpg","nome":"Arco Natalino Cenográfico Iluminado"},"56":{"codigo":"POR-015","imagem":"pecas-imagens/POR-015.jpg","nome":"Portal Natalino Monumental Feliz Natal com Árvore Presentes e Cenas Decorativas"},"57":{"codigo":"POR-016","imagem":"pecas-imagens/POR-016.jpg","nome":"Portal Bola de Natal Iluminado com Letreiro Feliz Natal"},"58":{"codigo":"TUN-002","imagem":"pecas-imagens/TUN-002.jpg","nome":"Túnel de Passagem Natalino com Estrelas e Lua Iluminado"},"59":{"codigo":"POR-017","imagem":"pecas-imagens/POR-017.jpg","nome":"Portal Cenográfico Natalino Iluminado com Laço"},"6":{"codigo":"ARV-006","imagem":"pecas-imagens/ARV-006.jpg","nome":"Árvore Natalina Geométrica Iluminada"},"60":{"codigo":"TUN-003","imagem":"pecas-imagens/TUN-003.jpg","nome":"Túnel de Passagem Natalino Imperial com Arabescos e Lustre Iluminado"},"61":{"codigo":"ARC-003","imagem":"pecas-imagens/ARC-003.jpg","nome":"Conjunto de Arcos Geométricos Natalinos Iluminados"},"62":{"codigo":"TUN-004","imagem":"pecas-imagens/TUN-004.jpg","nome":"Túnel de Passagem Natalino com Estrelas Cascata e Letreiro Iluminado"},"63":{"codigo":"TUN-005","imagem":"pecas-imagens/TUN-005.jpg","nome":"Túnel Luminoso Cenográfico com Estrelas"},"64":{"codigo":"POR-018","imagem":"pecas-imagens/POR-018.jpg","nome":"Portal Cenográfico Arco de Vagões Natalinos"},"65":{"codigo":"TUN-006","imagem":"pecas-imagens/TUN-006.jpg","nome":"Túnel Cenográfico de Luz Azul e Branca"},"66":{"codigo":"ARC-004","imagem":"pecas-imagens/ARC-004.jpg","nome":"Arco Florido Cenográfico Iluminado com Borboleta"},"67":{"codigo":"SAR-001","imagem":"pecas-imagens/SAR-001.jpg","nome":"Semi Arco Cenográfico Lançamento Espacial"},"68":{"codigo":"ATR-001","imagem":"pecas-imagens/ATR-001.jpg","nome":"Carrossel Cenográfico de Passagem"},"69":{"codigo":"POR-019","imagem":"pecas-imagens/POR-019.jpg","nome":"Portal Cenográfico Candy Cane Iluminado"},"7":{"codigo":"ARV-007","imagem":"pecas-imagens/ARV-007.jpg","nome":"Árvore de Natal Cônica em Saias"},"70":{"codigo":"POR-020","imagem":"pecas-imagens/POR-020.jpg","nome":"Portal Natalino Cenográfico Iluminado com Presentes e Enfeites"},"71":{"codigo":"GOR-001","imagem":"pecas-imagens/GOR-001.jpg","nome":"Par de Gorros Luminosos em Semi-Arco"},"72":{"codigo":"POR-021","imagem":"pecas-imagens/POR-021.jpg","nome":"Arco de Passagem Viária Nevado"},"73":{"codigo":"BOL-001","imagem":"pecas-imagens/BOL-001.jpg","nome":"Bola de Laços"},"74":{"codigo":"BOL-002","imagem":"pecas-imagens/BOL-002.jpg","nome":"Bola Natalina Cenográfica Gigante Iluminada com Portal 4,5m"},"75":{"codigo":"BOL-003","imagem":"pecas-imagens/BOL-003.jpg","nome":"Bola Natalina Cenográfica Gigante Iluminada com Portal 3,5m"},"76":{"codigo":"BOL-004","imagem":"pecas-imagens/BOL-004.jpg","nome":"Bola Natalina Cenográfica Gigante Iluminada com Gorro"},"77":{"codigo":"BOL-005","imagem":"pecas-imagens/BOL-005.jpg","nome":"Meia Bola de Natal Estrelada"},"78":{"codigo":"BOL-006","imagem":"pecas-imagens/BOL-006.jpg","nome":"Bola Natalina Cenográfica Iluminada com Árvore Vazada"},"79":{"codigo":"BOL-007","imagem":"pecas-imagens/BOL-007.jpg","nome":"Bola Natalina Cenográfica Gigante Iluminada com Arabescos"},"8":{"codigo":"ARV-008","imagem":"pecas-imagens/ARV-008.jpg","nome":"Árvore Natalina Cônica Premium com ACM e Estrelas Iluminadas"},"80":{"codigo":"BOL-008","imagem":"pecas-imagens/BOL-008.jpg","nome":"Bola Natalina 2D Cenográfica Iluminada sobre Base"},"81":{"codigo":"BOL-009","imagem":"pecas-imagens/BOL-009.jpg","nome":"Bola Natalina Cenográfica Iluminada Geométrica 1,2m"},"82":{"codigo":"BOL-010","imagem":"pecas-imagens/BOL-010.jpg","nome":"Bola Natalina Cenográfica Iluminada Bicolor"},"83":{"codigo":"BOL-011","imagem":"pecas-imagens/BOL-011.jpg","nome":"Bola Natalina Cenográfica Iluminada com Laço e Esferas Decorativas"},"84":{"codigo":"BOL-012","imagem":"pecas-imagens/BOL-012.jpg","nome":"Bola Natalina Cenográfica Iluminada Vazada 2D"},"85":{"codigo":"COM-001","imagem":"pecas-imagens/COM-001.jpg","nome":"Conjunto de Guizos Natalinos Monumentais"},"86":{"codigo":"BOL-013","imagem":"pecas-imagens/BOL-013.jpg","nome":"Bola Natalina Cenográfica Iluminada 2D"},"87":{"codigo":"BOL-014","imagem":"pecas-imagens/BOL-014.jpg","nome":"Bola Natalina Cenográfica Iluminada Geométrica 1,2m 3D"},"88":{"codigo":"BOL-015","imagem":"pecas-imagens/BOL-015.jpg","nome":"Bola de Natal Bicolor 2D Luminosa"},"89":{"codigo":"BOL-016","imagem":"pecas-imagens/BOL-016.jpg","nome":"Bola de Natal Bicolor 2D com Laço"},"9":{"codigo":"ARV-009","imagem":"pecas-imagens/ARV-009.jpg","nome":"Árvore Natalina Monumental Cenográfica com Vila Iluminada"},"90":{"codigo":"FLC-001","imagem":"pecas-imagens/FLC-001.jpg","nome":"Ornamento Floco de Neve Glacial 1,5m"},"91":{"codigo":"FLC-002","imagem":"pecas-imagens/FLC-002.jpg","nome":"Ornamento Floco de Neve Glacial 1,0m"},"92":{"codigo":"EST-003","imagem":"pecas-imagens/EST-003.jpg","nome":"Conjunto de Estrelas Radiantes Cenográficas"},"93":{"codigo":"EST-004","imagem":"pecas-imagens/EST-004.jpg","nome":"Estrela Natalina Cenográfica Iluminada Modelo 12 Pontas"},"94":{"codigo":"FLC-003","imagem":"pecas-imagens/FLC-003.jpg","nome":"Floco de Neve Natalino Iluminado com Estrela Interna"},"95":{"codigo":"EST-005","imagem":"pecas-imagens/EST-005.jpg","nome":"Estrela Natalina Concêntrica Iluminada"},"96":{"codigo":"EST-006","imagem":"pecas-imagens/EST-006.jpg","nome":"Estrela Natalina Cenográfica Vazada com Bolas"},"97":{"codigo":"PPS-006","imagem":"pecas-imagens/PPS-006.jpg","nome":"Luminária de Poste Sol com Estrelas e Raios Iluminada"},"98":{"codigo":"PPS-007","imagem":"pecas-imagens/PPS-007.jpg","nome":"Ornamento Natalino Iluminado para Poste com Flocos de Neve"},"99":{"codigo":"PPS-008","imagem":"pecas-imagens/PPS-008.jpg","nome":"Luminária Natalina para Poste Floco de Neve Iluminado A"}};
 
 const $ = (id) => document.getElementById(id);
 
@@ -325,11 +397,18 @@ function computeMetrics(data, targetEtapas){
   const totalFin = rows.reduce((a,r)=>a+r.qtdeFin,0);
   const conclusaoGeral = totalQtde ? (totalFin/totalQtde*100) : 0;
 
-  // Agrupa por COD+DESCR (não só COD) porque vários produtos na planilha estão sem código
-  // preenchido (COD="N/A") — agrupar só por COD misturaria produtos diferentes no mesmo item.
+  // Agrupa por COD+DESCR+QTDE (não só COD+DESCR) porque: (1) vários produtos na planilha
+  // estão sem código preenchido (COD="N/A") -- agrupar só por COD misturaria produtos
+  // diferentes no mesmo item; (2) o MESMO código pode ter vários lotes/pedidos distintos
+  // rodando em paralelo (ex: COD 240 com um lote de 20 peças já pronto e outro lote de 30
+  // peças ainda zerado) -- sem QTDE no agrupamento, esses lotes separados viram um "item"
+  // só e parecem uma peça com etapas contraditórias (a mesma etapa pronta E pendente ao
+  // mesmo tempo). QTDE é o melhor proxy de lote disponível hoje (a planilha não tem uma
+  // coluna explícita de lote/OS); lotes diferentes do mesmo código quase sempre têm
+  // quantidades diferentes, mas isso não é garantido a 100%.
   const byItem = {};
   rows.forEach(r=>{
-    const key = r.cod + '||' + r.descr;
+    const key = r.cod + '||' + r.descr + '||' + r.qtde;
     if(!byItem[key]) byItem[key] = [];
     byItem[key].push(r);
   });
@@ -342,11 +421,24 @@ function computeMetrics(data, targetEtapas){
     .map(g => ({ g, row: g.find(r => etapasAlvo.includes(r.etapa)) }))
     .filter(x => x.row);
 
-  const itensCompletos = itensNaEtapaAlvo.filter(x => x.row.status==='FINALIZADO').length;
   // QTDE FIN já é a contagem real de peças prontas naquela linha (ex: lote de 8 com "FIN 6/8"
   // na OBS) mesmo quando o STATUS do lote ainda está ANDAMENTO porque nem tudo terminou. Somar
   // só quando status==='FINALIZADO' escondia essas peças parciais já finalizadas.
   const pecasFinalizadas = itensNaEtapaAlvo.reduce((a,x)=>a+x.row.qtdeFin, 0);
+
+  // Relação peça a peça do que compõe pecasFinalizadas acima (mesmo critério: QTDE FIN > 0 na
+  // etapa alvo, mesmo que o lote ainda esteja ANDAMENTO) — ordenado por código (numérico quando
+  // possível, "N/A" por último) para bater com a forma que o PCP já confere na planilha.
+  const itensProntos = itensNaEtapaAlvo
+    .filter(x => x.row.qtdeFin > 0)
+    .map(x => ({ cod: x.row.cod, descr: x.row.descr, etapa: x.row.etapa, status: x.row.status, qtdeFin: x.row.qtdeFin }))
+    .sort((a,b) => {
+      const an = parseInt(a.cod,10), bn = parseInt(b.cod,10);
+      if(!isNaN(an) && !isNaN(bn)) return an-bn;
+      if(!isNaN(an)) return -1;
+      if(!isNaN(bn)) return 1;
+      return String(a.cod).localeCompare(String(b.cod));
+    });
 
   // "Não iniciada": com uma etapa específica selecionada, olha só a linha daquela etapa. Sem
   // filtro (fluxo inteiro), só conta como não iniciado o item que não tem NENHUMA etapa com
@@ -354,7 +446,6 @@ function computeMetrics(data, targetEtapas){
   const gruposNaoIniciados = hasEtapaFiltro
     ? itensNaEtapaAlvo.filter(x => x.row.status==='PENDENTE').map(x=>x.g)
     : itens.filter(g => g.every(r=>r.status==='PENDENTE'));
-  const itensNaoIniciados = gruposNaoIniciados.length;
   const pecasNaoIniciadas = gruposNaoIniciados.reduce((a,g)=>a+g[0].qtde, 0);
 
   // Quantidade REAL de peças: 1x por item (não por etapa/processo que ele passa). Com etapa(s)
@@ -373,7 +464,7 @@ function computeMetrics(data, targetEtapas){
     const q = rs.reduce((a,r)=>a+r.qtde,0);
     const qf = rs.reduce((a,r)=>a+r.qtdeFin,0);
     return {
-      etapa,
+      etapa, qtde: q, qtdeFin: qf,
       pendente: rs.filter(r=>r.status==='PENDENTE').length,
       andamento: rs.filter(r=>r.status==='ANDAMENTO').length,
       finalizado: rs.filter(r=>r.status==='FINALIZADO').length,
@@ -381,15 +472,9 @@ function computeMetrics(data, targetEtapas){
     };
   });
 
-  const statusCounts = {
-    FINALIZADO: rows.filter(r=>r.status==='FINALIZADO').length,
-    ANDAMENTO: rows.filter(r=>r.status==='ANDAMENTO').length,
-    PENDENTE: rows.filter(r=>r.status==='PENDENTE').length
-  };
-
-  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, itensCompletos, pecasFinalizadas,
+  return {rows, totalQtde, totalFin, conclusaoGeral, itensCount: itens.length, pecasFinalizadas, itensProntos,
     totalPecasReal, pecasNaoIniciadas, pecasAndamento, conclusaoPecasReal,
-    itensNaoIniciados, byEtapa, statusCounts, etapasOrdered};
+    byEtapa, etapasOrdered};
 }
 
 function fmtPct(n){ return n.toFixed(1).replace('.',',') + '%'; }
@@ -501,21 +586,66 @@ function renderClienteList(data){
   });
   const entries = Object.entries(counts).sort((a,b)=> b[1]-a[1]);
 
-  let html = `<div class="cliente-chip ${clienteFiltro===''?'active':''}" data-cliente="">
+  let html = `<div class="slicer-opt ${clienteFiltro===''?'active':''}" data-cliente="">
       <span class="name">Todos os clientes</span><span class="cnt">${data.length}</span></div>`;
   html += entries.map(([nome,cnt])=>`
-    <div class="cliente-chip ${clienteFiltro===nome?'active':''}" data-cliente="${nome.replace(/"/g,'&quot;')}">
+    <div class="slicer-opt ${clienteFiltro===nome?'active':''}" data-cliente="${nome.replace(/"/g,'&quot;')}">
       <span class="name">${nome}</span><span class="cnt">${cnt}</span>
     </div>`).join('');
 
   $('clienteList').innerHTML = html;
-  $('clienteList').querySelectorAll('.cliente-chip').forEach(el=>{
+  $('clienteList').querySelectorAll('.slicer-opt').forEach(el=>{
     el.addEventListener('click', ()=>{
       clienteFiltro = el.dataset.cliente;
       render(currentData);
     });
   });
 }
+
+function renderPecasProntas(itensProntos, total){
+  $('tblPecasProntas').innerHTML = itensProntos.map(it=>`
+    <tr class="row-clicavel" data-cod="${it.cod||''}" data-descr="${String(it.descr).replace(/"/g,'&quot;')}" data-etapa="${it.etapa}" data-status="${it.status}" data-qtdefin="${it.qtdeFin}">
+      <td>${it.cod||'N/A'}</td>
+      <td>${it.descr}</td>
+      <td>${it.etapa}</td>
+      <td><span class="badge ${it.status}">${it.status}</span></td>
+      <td>${it.qtdeFin}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="color:#8b93a1;">Nenhuma peça pronta ainda.</td></tr>';
+  $('tdTotalPecasProntas').textContent = total;
+}
+
+function openPecaModal(row){
+  const info = PECA_IMAGEM_MAP[row.dataset.cod];
+  const descr = row.dataset.descr;
+  $('pecaModalTitulo').textContent = descr;
+  $('pecaModalMeta').innerHTML = `
+    <span>Código: <b>${row.dataset.cod||'N/A'}</b></span>
+    <span>Etapa: <b>${row.dataset.etapa}</b></span>
+    <span>Status: <span class="badge ${row.dataset.status}">${row.dataset.status}</span></span>
+    <span>Qtde finalizada: <b>${row.dataset.qtdefin}</b></span>
+  `;
+  const imgWrap = $('pecaModalImgWrap');
+  if(info && info.imagem){
+    imgWrap.innerHTML = `<img src="${info.imagem}" alt="${descr}">`;
+  } else {
+    imgWrap.innerHTML = `<div class="peca-sem-imagem">Sem imagem cadastrada no catálogo comercial para este código.</div>`;
+  }
+  $('pecaModalOverlay').classList.add('open');
+}
+
+function closePecaModal(){
+  $('pecaModalOverlay').classList.remove('open');
+}
+
+$('tblPecasProntas').addEventListener('click', (e)=>{
+  const row = e.target.closest('tr.row-clicavel');
+  if(row) openPecaModal(row);
+});
+$('pecaModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'pecaModalOverlay') closePecaModal();
+});
+$('pecaModalClose').addEventListener('click', closePecaModal);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePecaModal(); });
 
 function renderEtapaDonuts(m){
   const el = $('etapaDonuts');
@@ -567,8 +697,6 @@ function render(data){
   $('lPecasAndamento').textContent = `peças em andamento (${etapaLabel})`;
   $('lPecasNaoIniciadas').textContent = `peças não iniciadas (${etapaLabel})`;
   $('lConclusao').textContent = `% concl. real (${etapaLabel})`;
-  $('lItensCompletos').textContent = `itens prontos (${etapaLabel})`;
-  $('lItensNaoIniciados').textContent = `itens não iniciados (${etapaLabel})`;
   $('pecasRealDesc').textContent = etapaSel.length
     ? `Quantidade de peças de fato (1x por item) cuja etapa (${etapaSel.join(', ')}) está FINALIZADO/ANDAMENTO/PENDENTE. Itens que não passam por nenhuma dessas etapas ficam de fora.`
     : 'Quantidade de peças de fato (1x por item), não contagem de processos/etapas. Uma peça só é "finalizada" quando chega FINALIZADO na etapa final do seu fluxo.';
@@ -579,9 +707,9 @@ function render(data){
   $('kpiPecasFinal').textContent = mReal.pecasFinalizadas;
   $('kpiPecasAndamento').textContent = mReal.pecasAndamento;
   $('kpiPecasNaoIniciadas').textContent = mReal.pecasNaoIniciadas;
-  $('kpiItens').textContent = mReal.itensCount;
-  $('kpiCompletos').textContent = mReal.itensCompletos;
-  $('kpiNaoIniciados').textContent = mReal.itensNaoIniciados;
+  $('heroPecasProntas').textContent = mReal.pecasFinalizadas;
+  $('heroPecasTotais').textContent = mReal.totalPecasReal;
+  $('heroConclusao').textContent = fmtPct(mReal.conclusaoPecasReal);
 
   // donut peças reais (Peças — visão real) — reage à etapa selecionada no filtro (ver mReal acima)
   const ctxPecasReal = $('chartPecasReal').getContext('2d');
@@ -598,22 +726,8 @@ function render(data){
     }
   });
 
-  // donut geral (Produção total)
-  const ctxTotal = $('chartTotal').getContext('2d');
-  if(charts.total) charts.total.destroy();
-  charts.total = new Chart(ctxTotal, {
-    type:'doughnut',
-    data:{
-      labels:['Finalizado','Andamento','Pendente'],
-      datasets:[{data:[m.statusCounts.FINALIZADO, m.statusCounts.ANDAMENTO, m.statusCounts.PENDENTE], backgroundColor:['#5aab86','#e3a544','#c96a5a'], borderColor:'#1c2027', borderWidth:3}]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, cutout:'68%',
-      plugins:{ legend:{position:'bottom', labels:{color:'#e8eaee', boxWidth:12, font:{size:11}}} }
-    }
-  });
-
   renderClienteList(data);
+  renderPecasProntas(mReal.itensProntos, mReal.pecasFinalizadas);
   renderEtapaDonuts(m);
 
   // conclusao por etapa
@@ -637,11 +751,18 @@ function render(data){
     }
   });
 
-  // filtro etapas (dropdown multi-seleção) — repopula as opções preservando o que já estava marcado
+  $('tblEtapaQtde').innerHTML = m.byEtapa.map(e=>`
+    <tr>
+      <td>${e.etapa}</td>
+      <td>${e.qtde}</td>
+      <td>${e.qtdeFin}</td>
+      <td>${fmtPct(e.pct)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" style="color:#8b93a1;">Sem dados.</td></tr>';
+
+  // filtro etapas (slicer) — repopula as opções preservando o que já estava marcado
   const msEtapaMenu = $('msEtapaMenu');
-  msEtapaMenu.innerHTML = mReal.etapasOrdered.map(e=>`<label class="ms-opt"><input type="checkbox" value="${e}" ${etapaSel.includes(e)?'checked':''}> ${e}</label>`).join('');
-  setMsLabel('msEtapaBtn', etapaSel, 'Todas as etapas');
-  setMsLabel('msStatusBtn', statusSel, 'Todos os status');
+  msEtapaMenu.innerHTML = mReal.etapasOrdered.map(e=>`<label class="slicer-opt"><input type="checkbox" value="${e}" ${etapaSel.includes(e)?'checked':''}> ${e}</label>`).join('');
 
   renderTable(m.rows);
   // A projeção histórica só existe por etapa individual (ou 'TOTAL' com nenhuma selecionada) —
@@ -652,13 +773,6 @@ function render(data){
 
 function getChecked(menuId){
   return Array.from(document.querySelectorAll('#'+menuId+' input:checked')).map(el=>el.value);
-}
-
-function setMsLabel(btnId, values, allLabel){
-  const btn = $(btnId);
-  if(!values.length) btn.textContent = allLabel;
-  else if(values.length <= 2) btn.textContent = values.join(', ');
-  else btn.textContent = values.length + ' selecionadas';
 }
 
 function renderTable(rows){
@@ -687,19 +801,18 @@ function renderTable(rows){
   `).join('') || '<tr><td colspan="7" style="color:#8b93a1;">Nenhum resultado.</td></tr>';
 }
 
-// dropdowns de multi-seleção: abre/fecha ao clicar no botão, fecha ao clicar fora, e reagem
-// a mudanças nos checkboxes (delegação de evento — o menu de etapas é recriado a cada render)
-function toggleMsMenu(menuId){
-  document.querySelectorAll('.ms-menu.open').forEach(m=>{ if(m.id!==menuId) m.classList.remove('open'); });
-  $(menuId).classList.toggle('open');
-}
-$('msEtapaBtn').addEventListener('click', (e)=>{ e.stopPropagation(); toggleMsMenu('msEtapaMenu'); });
-$('msStatusBtn').addEventListener('click', (e)=>{ e.stopPropagation(); toggleMsMenu('msStatusMenu'); });
-document.addEventListener('click', ()=> document.querySelectorAll('.ms-menu.open').forEach(m=>m.classList.remove('open')));
-$('msEtapaMenu').addEventListener('click', e=>e.stopPropagation());
-$('msStatusMenu').addEventListener('click', e=>e.stopPropagation());
+// listas de filtro (slicer): os checkboxes de etapa/status são recriados a cada render,
+// por isso o listener de 'change' fica no container (delegação de evento) em vez do input.
 $('msEtapaMenu').addEventListener('change', ()=> render(currentData));
 $('msStatusMenu').addEventListener('change', ()=> render(currentData));
+$('clearEtapa').addEventListener('click', ()=>{
+  $('msEtapaMenu').querySelectorAll('input:checked').forEach(el=>el.checked=false);
+  render(currentData);
+});
+$('clearStatus').addEventListener('click', ()=>{
+  $('msStatusMenu').querySelectorAll('input:checked').forEach(el=>el.checked=false);
+  render(currentData);
+});
 $('fBusca').addEventListener('input', ()=> renderTable(window._metrics.rows));
 
 // ---- Config: Supabase ----
